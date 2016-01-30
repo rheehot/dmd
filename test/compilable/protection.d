@@ -72,6 +72,20 @@ void main()
 
     // Public template mixin.
     static assert( __traits(compiles, publMT));
+
+    // Public aliases to private things
+    publicFAlias();
+    publicCAlias inst1;
+    publicSAlias inst2;
+    publicUAlias inst3;
+    publicIAlias inst4;
+    publicEAlias inst5;
+    mixin publicMTAlias;
+
+    publicTCAlias!int inst6;
+    publicTSAlias!int inst7;
+    publicTUAlias!int inst8;
+    publicTIAlias!int inst9;
 }
 
 /***************************************************/
