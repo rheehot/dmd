@@ -5,6 +5,8 @@ import core.stdc.stdio;
 import core.stdc.stdarg;
 import core.stdc.config;
 
+void main () {}
+version (none):
 extern (C++)
         int foob(int i, int j, int k);
 
