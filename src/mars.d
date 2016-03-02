@@ -143,7 +143,7 @@ extern (C++) void ensurePathToNameExists(Loc loc, const(char)* name)
 /**
  * Print DMD's logo on stdout
  */
-extern (C++) static void logo()
+private void logo()
 {
     printf("DMD%llu D Compiler %s\n%s %s\n", cast(ulong)size_t.sizeof * 8, global._version, global.copyright, global.written);
 }
@@ -152,7 +152,7 @@ extern (C++) static void logo()
 /**
  * Print DMD's usage message on stdout
  */
-extern (C++) static void usage()
+private void usage()
 {
     static if (TARGET_LINUX)
     {
@@ -311,20 +311,24 @@ extern (C++) void genCmain(Scope* sc)
 
 
 /**
- * DMD's real entry point
+ * DMD's entry point
  *
  * Parses command line arguments and config file, open and read all
  * provided source file and do semantic analysis on them.
  *
  * Params:
- *   argc = Number of arguments passed via command line
- *   argv = Array of string arguments passed via command line
+ *   arguments = Array of string arguments passed via command line
  *
  * Returns:
  *   Application return code
  */
-extern (C++) int tryMain(size_t argc, const(char)** argv)
+private int main(string[] arguments)
 {
+    import core.memory;
+    // For the moment, we don't use the GC as it causes DMD to SEGV.
+    version (GC) {}
+    else GC.disable();
+
     Strings files;
     Strings libmodules;
     size_t argcstart = argc;
@@ -340,25 +344,16 @@ extern (C++) int tryMain(size_t argc, const(char)** argv)
         fflush(stdout); // avoid interleaving with stderr output when redirecting
     }
     // Check for malformed input
-    if (argc < 1 || !argv)
+    if (arguments.length)
     {
     Largs:
         error(Loc(), "missing or null command line arguments");
         fatal();
     }
-    // Convert argc/argv into arguments[] for easier handling
-    Strings arguments;
-    arguments.setDim(argc);
-    for (size_t i = 0; i < argc; i++)
-    {
-        if (!argv[i])
-            goto Largs;
-        arguments[i] = argv[i];
-    }
-    if (response_expand(&arguments)) // expand response files
+    if (response_expand(arguments)) // expand response files
         error(Loc(), "can't open response file");
     //for (size_t i = 0; i < arguments.dim; ++i) printf("arguments[%d] = '%s'\n", i, arguments[i]);
-    files.reserve(arguments.dim - 1);
+    files.reserve(arguments.length - 1);
     // Set default values
     global.params.argv0 = arguments[0];
     global.params.color = isConsoleColorSupported();
@@ -447,7 +442,7 @@ extern (C++) int tryMain(size_t argc, const(char)** argv)
     VersionCondition.addPredefinedGlobalIdent("LittleEndian");
     VersionCondition.addPredefinedGlobalIdent("D_Version2");
     VersionCondition.addPredefinedGlobalIdent("all");
-    global.inifilename = parse_conf_arg(&arguments);
+    global.inifilename = parse_conf_arg(arguments);
     if (global.inifilename)
     {
         // can be empty as in -conf=
@@ -497,47 +492,37 @@ extern (C++) int tryMain(size_t argc, const(char)** argv)
     getenv_setargv(readFromEnv(&environment, "DFLAGS"), &arguments);
     updateRealEnvironment(&environment);
     environment.reset(1); // don't need environment cache any more
-    version (none)
+    foreach (i, p; arguments)
     {
-        for (size_t i = 0; i < arguments.dim; i++)
+        if (p.startsWith("-"))
         {
-            printf("arguments[%d] = '%s'\n", i, arguments[i]);
-        }
-    }
-    for (size_t i = 1; i < arguments.dim; i++)
-    {
-        const(char)* p = arguments[i];
-        if (*p == '-')
-        {
-            if (strcmp(p + 1, "allinst") == 0)
-                global.params.allInst = true;
-            else if (strcmp(p + 1, "de") == 0)
+            p.parseSwitch("-allinst", global.params.allInst = true);
+            p.parseSwitch("-de", (b) => global.params.useDeprecated = 0);
+            p.parseSwitch("-d", (b) => global.params.useDeprecated = 1);
+            p.parseSwitch("-dw", (b) => global.params.useDeprecated = 2);
+            else if (p == "-de")
                 global.params.useDeprecated = 0;
-            else if (strcmp(p + 1, "d") == 0)
+            else if (p == "-d")
                 global.params.useDeprecated = 1;
-            else if (strcmp(p + 1, "dw") == 0)
-                global.params.useDeprecated = 2;
-            else if (strcmp(p + 1, "dwarfeh") == 0)
+            else if (p == "-dw")
+
+            else if (p == "-dwarfeh")
                 global.params.dwarfeh = true;
-            else if (strcmp(p + 1, "c") == 0)
+            else if (p == "-c")
                 global.params.link = false;
-            else if (memcmp(p + 1, cast(char*)"color", 5) == 0)
+            else if (p.startsWith("-color"))
             {
                 global.params.color = true;
                 // Parse:
                 //      -color
                 //      -color=on|off
-                if (p[6] == '=')
-                {
-                    if (strcmp(p + 7, "off") == 0)
-                        global.params.color = false;
-                    else if (strcmp(p + 7, "on") != 0)
-                        goto Lerror;
-                }
-                else if (p[6])
+                auto remains = p["-color".length .. $];
+                if (remains == "=off")
+                    global.params.color = false;
+                else if (remains.length && remains != "=on")
                     goto Lerror;
             }
-            else if (memcmp(p + 1, cast(char*)"conf=", 5) == 0)
+            else if (p.startsWith("conf="))
             {
                 // ignore, already handled above
             }
@@ -1756,30 +1741,6 @@ Language changes listed by -transition=id:
 
 
 /**
- * Entry point which forwards to `tryMain`.
- *
- * Returns:
- *   Return code of the application
- */
-int main()
-{
-    import core.memory;
-    import core.runtime;
-
-    version (GC)
-    {
-    }
-    else
-    {
-        GC.disable();
-    }
-
-    auto args = Runtime.cArgs();
-    return tryMain(args.argc, cast(const(char)**)args.argv);
-}
-
-
-/**
  * Parses an environment variable containing command-line flags
  * and append them to `args`.
  *
@@ -1903,7 +1864,7 @@ extern (C++) void escapePath(OutBuffer* buf, const(char)* fname)
  *   "32", "64" or "32mscoff" if the "-m32", "-m64", "-m32mscoff" flags were passed,
  *   respectively. If they weren't, return `arch`.
  */
-extern (C++) static const(char)* parse_arch_arg(Strings* args, const(char)* arch)
+private const(char)* parse_arch_arg(Strings* args, const(char)* arch)
 {
     for (size_t i = 0; i < args.dim; ++i)
     {
@@ -1929,19 +1890,14 @@ extern (C++) static const(char)* parse_arch_arg(Strings* args, const(char)* arch
  * Returns:
  *   Path to the config file to use
  */
-extern (C++) static const(char)* parse_conf_arg(Strings* args)
+private string parse_conf_arg(string[] args)
 {
-    const(char)* conf = null;
-    for (size_t i = 0; i < args.dim; ++i)
+    enum conf_switch = "-conf";
+    string conf;
+    foreach (i, p; args)
     {
-        const(char)* p = (*args)[i];
-        if (p[0] == '-')
-        {
-            if (strncmp(p + 1, "conf=", 5) == 0)
-                conf = p + 6;
-            else if (strcmp(p + 1, "run") == 0)
-                break;
-        }
+        if (p.startsWith(conf_switch))
+            conf = p[conf_switch.lengt .. $];
     }
     return conf;
 }
@@ -1980,4 +1936,32 @@ extern (C++) VarDeclarations* VarDeclarations_create()
 extern (C++) Expressions* Expressions_create()
 {
     return new Expressions();
+}
+
+
+/**
+ * Helper function to check if a string starts with the given pattern
+ *
+ * Mimic what is done in Phobos, which we don't have access to.
+ *
+ * Params:
+ *   within  = The string to search in
+ *   pattern = The string which is expected at the beggining of `within`
+ *
+ * Returns:
+ *   `true` if within stats with the string 'pattern' or if pattern
+ *   is empty, `false` otherwise
+ */
+private bool startsWith (const(char)[] within, const(char)[] pattern)
+{
+    return within.length >= pattern.length
+        && within[0 .. pattern.length] == pattern;
+}
+
+private bool parseSwitch (const(char)[] argument,
+                          const(char)[] expected,
+                          lazy void action)
+{
+    if (argument == expected)
+        action;
 }

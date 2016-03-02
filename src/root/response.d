@@ -50,15 +50,15 @@ import ddmd.root.file, ddmd.root.filename;
  *   0   success
  *   !=0   failure (argc, argv unchanged)
  */
-bool response_expand(Strings* args)
+bool response_expand(ref string[] args)
 {
     int recurse = 0;
-    foreach (i, cp; *args)
+    foreach (i, cp; args)
     {
         if (cp[0] != '@')
             continue;
 
-        args.remove(i);
+        args[i] = null;
         char* buffer;
         char* bufend;
         cp++;
@@ -119,7 +119,11 @@ bool response_expand(Strings* args)
                 {
                     continue;
                 }
-                args.insert(i, p);
+                // Insert in place if possible, append if not
+                if (args[i] == null)
+                    args[i] = p;
+                else
+                    args ~= p;
                 ++i;
                 instring = 0;
                 c = 0;
