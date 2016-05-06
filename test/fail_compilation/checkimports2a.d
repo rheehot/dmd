@@ -2,13 +2,12 @@
 /*
 TEST_OUTPUT:
 ---
-fail_compilation/checkimports2a.d(24): Deprecation: local import search method found variable imports.imp2.X instead of variable checkimports2a.X
-fail_compilation/checkimports2a.d(30): Deprecation: local import search method found variable imports.imp2.X instead of nothing
-fail_compilation/checkimports2a.d(30): Error: no property 'X' for type 'checkimports2a.B'
-fail_compilation/checkimports2a.d(31): Deprecation: local import search method found variable imports.imp2.Y instead of nothing
-fail_compilation/checkimports2a.d(31): Error: no property 'Y' for type 'checkimports2a.B'
-fail_compilation/checkimports2a.d(33): Deprecation: local import search method found variable imports.imp2.X instead of variable checkimports2a.X
-fail_compilation/checkimports2a.d(34): Deprecation: local import search method found variable imports.imp2.Y instead of variable imports.imp1.Y
+fail_compilation/checkimports2a.d(23): Deprecation: local import search method found variable imports.imp2.X instead of variable checkimports2a.X
+fail_compilation/checkimports2a.d(29): Deprecation: local import search method found variable imports.imp2.X instead of nothing
+fail_compilation/checkimports2a.d(29): Error: no property 'X' for type 'checkimports2a.B'
+fail_compilation/checkimports2a.d(30): Deprecation: local import search method found variable imports.imp2.Y instead of nothing
+fail_compilation/checkimports2a.d(30): Error: no property 'Y' for type 'checkimports2a.B'
+fail_compilation/checkimports2a.d(32): Deprecation: local import search method found variable imports.imp2.X instead of variable checkimports2a.X
 ---
 */
 
@@ -31,5 +30,5 @@ class C : B
     static assert(B.Y == 2);    // imp2.Y --> error
 
     static assert(X == 0);      // imp2.X --> .X
-    static assert(Y == 1);      // imp2.Y --> imp1.Y
+    static assert(Y == 2);      // imp2.Y (private import visible from module)
 }

@@ -8676,6 +8676,11 @@ public:
             }
 
             auto s = sym.search(e.loc, ident, flags | SearchLocalsOnly);
+            if (!s)
+                s = sc.search(e.loc, ident, flags | SearchLocalsOnly);
+            if (!s)
+                s = sym.search(e.loc, ident, flags | SearchImportsOnly);
+
             if (global.params.check10378)
             {
                 alias snew = s;

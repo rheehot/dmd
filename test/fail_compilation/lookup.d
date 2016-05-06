@@ -22,5 +22,5 @@ class C : B
     static assert(B.Y == 2);
 
     static assert(X == 0);
-    static assert(Y == 1);
+    static assert(Y == 2);
 }
