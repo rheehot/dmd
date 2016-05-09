@@ -1,0 +1,7 @@
+module visibility1;
+
+import protection.test.base_class_public_import;
+import protection.test.base_class_protected_import;
+import protection.test.base_class_qualified_package_import;
+import protection.aggregate.base_class_package_import;
+import protection.aggregate.base_class_private_import;
