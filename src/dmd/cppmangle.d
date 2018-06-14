@@ -103,7 +103,7 @@ private final class CppMangleVisitor : Visitor
     alias visit = Visitor.visit;
     Objects components;         // array of components available for substitution
     /// array of components available for template parameter substitution
-    Objects* tmpl_components;
+    TemplateParameters* tmpl_components;
     OutBuffer* buf;             // append the mangling to buf[]
     Loc loc;                    // location for use in error messages
 
@@ -256,18 +256,19 @@ private final class CppMangleVisitor : Visitor
 
         printf("%s called with %p\n", ti.toChars(), tmpl_components);
         foreach (idx, param; (*td.parameters))
-            printf("[%d] Template params: %p\n", idx, param);
+            printf("[%d] Template params: %p (alias: %p)\n", idx, param, param.isTemplateTypeParameter());
         if (tmpl_components)
             foreach (idx, param; (*tmpl_components))
-                printf("[%d] Original params: %p\n", idx, param);
+                printf("[%d] Original params: %p (alias: %p)\n", idx, param, param.isTemplateTypeParameter());
 
         bool substituteParam()
         {
             if (tmpl_components) return false;
+
             foreach (idx, ref elem; *tmpl_components)
             {
-                printf("[%d] Comparing %s and %s\n", idx, elem.toChars(), o.toChars());
-                if (o == elem)
+                //printf("[%d] Comparing %s and %s\n", idx, elem.toChars(), o.toChars());
+                if (false/*o == elem*/)
                 {
                     // Unless it's a type, substitutions are expressions
                     // https://itanium-cxx-abi.github.io/cxx-abi/abi.html#mangle.template-args
@@ -872,7 +873,7 @@ private final class CppMangleVisitor : Visitor
                 source_name(ti);
             if (appendReturnType)
             {
-                tmpl_components = ti.tiargs;
+                tmpl_components = (cast(TemplateDeclaration)ti.tempdecl).parameters;
                 scope(exit) tmpl_components = null;
                 headOfType(tf.nextOf());  // mangle return type
             }
