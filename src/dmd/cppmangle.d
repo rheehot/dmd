@@ -102,10 +102,42 @@ private final class CppMangleVisitor : Visitor
 {
     alias visit = Visitor.visit;
     Objects components;         // array of components available for substitution
+    /// array of components available for template parameter substitution
+    Objects* tmpl_components;
     OutBuffer* buf;             // append the mangling to buf[]
     Loc loc;                    // location for use in error messages
 
   final:
+    /**
+     * Write a seq-id from an index number, excluding the terminating '_'
+     *
+     * Params:
+     *   idx = the index in a substitution list.
+     *         Note that index 0 has no value, and `S0_` would be the
+     *         substitution at index 1 in the list.
+     *
+     * See-Also:
+     *  https://itanium-cxx-abi.github.io/cxx-abi/abi.html#mangle.seq-id
+     */
+    private void writeSequenceFromIndex(size_t idx)
+    {
+        if (idx)
+        {
+            void write_seq_id(size_t i)
+            {
+                if (i >= 36)
+                {
+                    write_seq_id(i / 36);
+                    i %= 36;
+                }
+                i += (i < 10) ? '0' : 'A' - 10;
+                buf.writeByte(cast(char)i);
+            }
+
+            write_seq_id(idx - 1);
+        }
+    }
+
     bool substitute(RootObject p)
     {
         //printf("substitute %s\n", p ? p.toChars() : null);
@@ -116,22 +148,7 @@ private final class CppMangleVisitor : Visitor
             /* Sequence is S_, S0_, .., S9_, SA_, ..., SZ_, S10_, ...
              */
             buf.writeByte('S');
-            if (i)
-            {
-                // Write <seq-id> to buf
-                void write_seq_id(size_t i)
-                {
-                    if (i >= 36)
-                    {
-                        write_seq_id(i / 36);
-                        i %= 36;
-                    }
-                    i += (i < 10) ? '0' : 'A' - 10;
-                    buf.writeByte(cast(char)i);
-                }
-
-                write_seq_id(i - 1);
-            }
+            writeSequenceFromIndex(i);
             buf.writeByte('_');
             return true;
         }
@@ -237,7 +254,37 @@ private final class CppMangleVisitor : Visitor
         TemplateParameter tp = (*td.parameters)[arg];
         RootObject o = (*ti.tiargs)[arg];
 
-        if (tp.isTemplateTypeParameter())
+        printf("%s called with %p\n", ti.toChars(), tmpl_components);
+        foreach (idx, param; (*td.parameters))
+            printf("[%d] Template params: %p\n", idx, param);
+        if (tmpl_components)
+            foreach (idx, param; (*tmpl_components))
+                printf("[%d] Original params: %p\n", idx, param);
+
+        bool substituteParam()
+        {
+            if (tmpl_components) return false;
+            foreach (idx, ref elem; *tmpl_components)
+            {
+                printf("[%d] Comparing %s and %s\n", idx, elem.toChars(), o.toChars());
+                if (o == elem)
+                {
+                    // Unless it's a type, substitutions are expressions
+                    // https://itanium-cxx-abi.github.io/cxx-abi/abi.html#mangle.template-args
+                    if (!tp.isTemplateTypeParameter())
+                        buf.writeByte('X');
+                    buf.writeByte('T');
+                    writeSequenceFromIndex(idx);
+                    buf.writeByte('_');
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        if (tmpl_components && substituteParam())
+            return;
+        else if (tp.isTemplateTypeParameter())
         {
             Type t = isType(o);
             assert(t);
@@ -321,6 +368,11 @@ private final class CppMangleVisitor : Visitor
      *  ti = the template instance
      *  firstArg = index of the first template argument to mangle
      *             (used for operator overloading)
+     *  subs = if we are mangling the arguments / return type of a
+     *         templated function, contains the list of said arguments,
+     *         in order to perform substitutions (see section 5.1.5.8
+     *         of the Itanium ABI: "Template parameters")
+     *
      * Returns:
      *  true if any arguments were written
      */
@@ -331,6 +383,7 @@ private final class CppMangleVisitor : Visitor
         if (!ti || ti.tiargs.dim <= firstArg)   // could happen if std::basic_string is not a template
             return false;
         buf.writeByte('I');
+        printf("%s: %s, %d\n", __FUNCTION__.ptr, ti.toChars(), firstArg);
         foreach (i; firstArg .. ti.tiargs.dim)
         {
             TemplateDeclaration td = ti.tempdecl.isTemplateDeclaration();
@@ -368,7 +421,7 @@ private final class CppMangleVisitor : Visitor
 
     void source_name(Dsymbol s)
     {
-        //printf("source_name(%s)\n", s.toChars());
+        printf("source_name(%s)\n", s.toChars());
         if (TemplateInstance ti = s.isTemplateInstance())
         {
             if (!substitute(ti.tempdecl))
@@ -810,7 +863,7 @@ private final class CppMangleVisitor : Visitor
                         buf.writestring(symName);
                         if (isConvertFunc)
                             template_arg(ti, 0);
-                        appendReturnType = template_args(ti, firstTemplateArg) && appendReturnType;
+                        appendReturnType = template_args(ti, firstTemplateArg)  && appendReturnType;
                     }
                 }
                 buf.writeByte('E');
@@ -818,7 +871,11 @@ private final class CppMangleVisitor : Visitor
             else
                 source_name(ti);
             if (appendReturnType)
+            {
+                tmpl_components = ti.tiargs;
+                scope(exit) tmpl_components = null;
                 headOfType(tf.nextOf());  // mangle return type
+            }
         }
         else
         {
