@@ -5652,7 +5652,7 @@ extern (C++) abstract class TypeQualified : Type
             if (const n = importHint(p))
                 error(loc, "`%s` is not defined, perhaps `import %s;` ?", p, n);
             else if (auto s2 = sc.search_correct(id))
-                error(loc, "undefined identifier `%s`, did you mean %s `%s`?", p, s2.kind(), s2.toChars());
+            { error(loc, "undefined identifier `%s`, did you mean %s `%s`?", p, s2.kind(), s2.toChars()); *(cast(uint*)0) = 42; }
             else if (const q = Scope.search_correct_C(id))
                 error(loc, "undefined identifier `%s`, did you mean `%s`?", p, q);
             else
