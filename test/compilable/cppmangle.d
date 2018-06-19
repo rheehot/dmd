@@ -744,3 +744,31 @@ version (Posix)
 
     static assert(test18957.mangleof == "_Z9test18957RKNSt9test18957E");
 }
+
+/**************************************/
+// https://issues.dlang.org/show_bug.cgi?id=16479
+//  Missing substitution while mangling C++ template parameter for functions
+version (Posix) extern (C++)
+{
+	FuncT1* func16479_1 (FuncT1) ()       { return null; }
+	static assert(func16479_1!(int).mangleof == `_Z11func16479_1IiEPT_v`);
+
+	void    func16479_2 (FuncT1) (FuncT1) { }
+	static assert(func16479_2!(int).mangleof == `_Z11func16479_1IiEvT_`);
+
+	FuncT1* func16479_3 (FuncT1) (FuncT1) { return null; }
+	static assert(func16479_3!(int).mangleof == `_Z11func16479_1IiEPT_S0_`);
+
+	struct Array16479 (Arg) { Arg* data; }
+	struct Value16479 (int Value1, int Value2) { int data; }
+
+	Array!(FuncT2)           func16479_4 (FuncT1, FuncT2) (FuncT1)
+	{ return Array!(FuncT2).init; }
+	static assert(func16479_4!(int, long).mangleof
+				  == `_Z11func16479_4IilE5ArrayIT0_ET_`);
+
+	Value!(Value2, Value1)* func16479_5 (int Value1, int Value2) ()
+	{ return null; }
+	static assert(func16479_5!(1, 1).mangleof
+				  == `_Z11func16479_5ILi1ELi1EEP5ValueIXT0_EXT_EEv`);
+}
