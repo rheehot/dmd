@@ -683,14 +683,16 @@ extern (C++) final class AliasDeclaration : Declaration
     Dsymbol aliassym;
     Dsymbol overnext;   // next in overload list
     Dsymbol _import;    // !=null if unresolved internal alias for selective import
+	TemplateParameter dependent; // If true, this alias comes from a template parameter
 
-    extern (D) this(Loc loc, Identifier id, Type type)
+    extern (D) this(Loc loc, Identifier id, Type type, TemplateParameter tp = null)
     {
         super(id);
         //printf("AliasDeclaration(id = '%s', type = %p)\n", id.toChars(), type);
         //printf("type = '%s'\n", type.toChars());
         this.loc = loc;
         this.type = type;
+		this.dependent = tp;
         assert(type);
     }
 
@@ -713,7 +715,9 @@ extern (C++) final class AliasDeclaration : Declaration
     {
         //printf("AliasDeclaration::syntaxCopy()\n");
         assert(!s);
-        AliasDeclaration sa = type ? new AliasDeclaration(loc, ident, type.syntaxCopy()) : new AliasDeclaration(loc, ident, aliassym.syntaxCopy(null));
+        AliasDeclaration sa = type
+			? new AliasDeclaration(loc, ident, type.syntaxCopy(), dependent)
+			: new AliasDeclaration(loc, ident, aliassym.syntaxCopy(null));
         sa.storage_class = storage_class;
         return sa;
     }

@@ -2030,8 +2030,11 @@ extern (C++) final class TemplateDeclaration : ScopeDsymbol
 
         if (ta)
         {
-            //printf("type %s\n", ta.toChars());
-            d = new AliasDeclaration(Loc.initial, tp.ident, ta);
+            d = new AliasDeclaration(Loc.initial, tp.ident, ta, tp);
+			if (strcmp("FuncT1".ptr, tp.ident.toChars()) == 0)
+				printf("[%s] Installing type %s (%p => %p, tp: %p)\n",
+					   tp.ident.toChars(), ta.toChars(), ta, d, tp);
+			// 	assert(0);
         }
         else if (sa)
         {

@@ -5297,10 +5297,20 @@ void templateInstanceSemantic(TemplateInstance tempinst, Scope* sc, Expressions*
         }
     }
 
-    static if (LOG)
+    static if (LOG || true)
     {
-        printf("\n+TemplateInstance.dsymbolSemantic('%s', this=%p)\n", tempinst.toChars(), tempinst);
+        printf("\n+TemplateInstance.dsymbolSemantic('%s', this=%p, fargs=(%p, %d))\n",
+			   tempinst.toChars(), tempinst, fargs, fargs ? fargs.dim : 0);
     }
+
+	if (fargs)
+		foreach (idx, a; *fargs)
+			printf("[%d] %p => %s\n", a, a.toChars());
+
+	if (tempinst.tiargs)
+		foreach (idx, a; *tempinst.tiargs)
+			printf("[%d] (TEMPINST) %s %p\n", idx, a.toChars(), a);
+
     if (tempinst.inst) // if semantic() was already run
     {
         static if (LOG)
@@ -5368,6 +5378,11 @@ void templateInstanceSemantic(TemplateInstance tempinst, Scope* sc, Expressions*
     }
     TemplateDeclaration tempdecl = tempinst.tempdecl.isTemplateDeclaration();
     assert(tempdecl);
+
+	if (tempdecl.parameters)
+		foreach (idx, a; *tempdecl.parameters)
+			printf("[%d] (TEMPDECL) %s %p\n", idx, a.ident.toChars(), a);
+
 
     // If tempdecl is a mixin, disallow it
     if (tempdecl.ismixin)

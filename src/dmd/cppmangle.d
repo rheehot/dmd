@@ -103,7 +103,8 @@ private final class CppMangleVisitor : Visitor
     alias visit = Visitor.visit;
     Objects components;         // array of components available for substitution
     /// array of components available for template parameter substitution
-    TemplateParameters* tmpl_components;
+    Objects* tmpl_components;
+	TemplateDeclaration context; // Context, for template argument substitution
     OutBuffer* buf;             // append the mangling to buf[]
     Loc loc;                    // location for use in error messages
 
@@ -254,17 +255,22 @@ private final class CppMangleVisitor : Visitor
         TemplateParameter tp = (*td.parameters)[arg];
         RootObject o = (*ti.tiargs)[arg];
 
+		// NEED TO COMPARE TI
+		// If arg.ti is parent.td ?
         printf("%s called with %p\n", ti.toChars(), tmpl_components);
         foreach (idx, param; (*td.parameters))
             printf("[%d] Template params: %p (alias: %p)\n", idx, param, param.isTemplateTypeParameter());
+
+		// Find the alias and check dependent
         if (tmpl_components)
             foreach (idx, param; (*tmpl_components))
-                printf("[%d] Original params: %p (alias: %p)\n", idx, param, param.isTemplateTypeParameter());
+                printf("[%d] Original params: %p %d\n", idx, param, param.dyncast());
 
         bool substituteParam()
         {
             if (tmpl_components) return false;
 
+			version (none) {
             foreach (idx, ref elem; *tmpl_components)
             {
                 //printf("[%d] Comparing %s and %s\n", idx, elem.toChars(), o.toChars());
@@ -279,7 +285,7 @@ private final class CppMangleVisitor : Visitor
                     buf.writeByte('_');
                     return true;
                 }
-            }
+            }}
             return false;
         }
 
@@ -423,7 +429,14 @@ private final class CppMangleVisitor : Visitor
     void source_name(Dsymbol s)
     {
         printf("source_name(%s)\n", s.toChars());
-        if (TemplateInstance ti = s.isTemplateInstance())
+		if (AliasDeclaration ad = s.isAliasDeclaration())
+		{
+			// This type reference a template parameter from the function
+			// We have to perform substitution using `T_`, `T0_`, `T1_`...
+			if (ad.dependent)
+				assert(0);
+		}
+        else if (TemplateInstance ti = s.isTemplateInstance())
         {
             if (!substitute(ti.tempdecl))
             {
@@ -433,14 +446,13 @@ private final class CppMangleVisitor : Visitor
                 buf.writestring(name);
             }
             template_args(ti);
+			return;
         }
-        else
-        {
-            const name = s.ident.toString();
-            buf.print(name.length);
-            buf.writestring(name);
-        }
-    }
+
+		const name = s.ident.toString();
+		buf.print(name.length);
+		buf.writestring(name);
+	}
 
     /********
      * See if s is actually an instance of a template
@@ -740,6 +752,10 @@ private final class CppMangleVisitor : Visitor
 
         if (TemplateDeclaration ftd = getFuncTemplateDecl(d))
         {
+			auto prev_ctx = this.context;
+			this.context = ftd;
+			scope (exit) this.context = ftd;
+
             /* It's an instance of a function template
              */
             TemplateInstance ti = d.parent.isTemplateInstance();
@@ -873,7 +889,8 @@ private final class CppMangleVisitor : Visitor
                 source_name(ti);
             if (appendReturnType)
             {
-                tmpl_components = (cast(TemplateDeclaration)ti.tempdecl).parameters;
+				printf("Nextof: %s -- %p\n", tf.nextOf().nextOf().toChars(), tf.nextOf().nextOf());
+                tmpl_components = ti.tiargs;
                 scope(exit) tmpl_components = null;
                 headOfType(tf.nextOf());  // mangle return type
             }
@@ -1013,7 +1030,12 @@ public:
         else
         {
             // For value types, strip const/immutable/shared from the head of the type
-            t.mutableOf().unSharedOf().accept(this);
+			printf("%p => %s\n", t, t.toChars());
+			t = t.mutableOf();
+			printf("%p => %s\n", t, t.toChars());
+			t = t.unSharedOf();
+			printf("%p => %s\n", t, t.toChars());
+			t.accept(this);
         }
     }
 
@@ -1248,10 +1270,15 @@ public:
         if (t.isImmutable() || t.isShared())
             return error(t);
 
+		/*
+		 * Issue: On prend le type, mais le type peut etre compose a partir d'un template arg.
+		 * Par example, T*
+		 */
+
         /* __c_long and __c_ulong get special mangling
          */
         const id = t.sym.ident;
-        //printf("struct id = '%s'\n", id.toChars());
+        printf("struct id = '%s'\n", id.toChars());
         if (id == Id.__c_long)
             return writeBasicType(t, 0, 'l');
         else if (id == Id.__c_ulong)

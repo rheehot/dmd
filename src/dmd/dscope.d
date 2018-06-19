@@ -382,7 +382,8 @@ struct Scope
                         warning(s.loc, "array `length` hides other `length` name in outer scope");
                     }
                     //printMsg("\tfound local", s);
-                    if (pscopesym)
+					// printf("Found %s %s in local: %p\n", s.kind(), s.toChars(), s);
+					if (pscopesym)
                         *pscopesym = sc.scopesym;
                     return s;
                 }

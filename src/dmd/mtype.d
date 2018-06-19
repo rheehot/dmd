@@ -5428,8 +5428,12 @@ extern (C++) abstract class TypeQualified : Type
         {
             //printf("\t1: s = '%s' %p, kind = '%s'\n",s.toChars(), s, s.kind());
             Declaration d = s.isDeclaration();
-            if (d && (d.storage_class & STC.templateparameter))
+            if (d && (d.storage_class & STC.templateparameter)) {
+				printf("%s %s (%p) is a template parameter to %s %s (%p)\n",
+					   s.kind(), s.toChars(), s,
+					   s.toAlias().kind(), s.toAlias().toChars(), s.toAlias());
                 s = s.toAlias();
+			}
             else
             {
                 // check for deprecated or disabled aliases
@@ -5643,6 +5647,7 @@ extern (C++) abstract class TypeQualified : Type
             else
                 *pt = t.merge();
         }
+		assert(s);
         if (!s)
         {
             /* Look for what user might have intended
@@ -5744,7 +5749,11 @@ extern (C++) final class TypeInstance : TypeQualified
 
     override Type syntaxCopy()
     {
-        //printf("TypeInstance::syntaxCopy() %s, %d\n", toChars(), idents.dim);
+        printf("TypeInstance::syntaxCopy() %s, %d\n", toChars(), idents.dim);
+		if (tempinst.tiargs)
+			foreach (idx, ta; *tempinst.tiargs)
+				printf("[%d] %s (%p)\n", idx, ta.toChars(), ta);
+
         auto t = new TypeInstance(loc, cast(TemplateInstance)tempinst.syntaxCopy(null));
         t.syntaxCopyHelper(this);
         t.mod = mod;

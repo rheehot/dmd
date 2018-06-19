@@ -1238,6 +1238,8 @@ private extern (C++) final class ExpressionSemanticVisitor : Visitor
             return;
         }
 
+		assert(exp);
+
         Dsymbol scopesym;
         Dsymbol s = sc.search(exp.loc, exp.ident, &scopesym);
         if (s)
