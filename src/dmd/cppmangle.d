@@ -428,7 +428,7 @@ private final class CppMangleVisitor : Visitor
 
     void source_name(Dsymbol s)
     {
-        printf("source_name(%s)\n", s.toChars());
+        printf("source_name(%s %s - %p)\n", s.kind(), s.toChars(), s);
 		if (AliasDeclaration ad = s.isAliasDeclaration())
 		{
 			// This type reference a template parameter from the function

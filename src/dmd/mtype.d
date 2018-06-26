@@ -5432,7 +5432,7 @@ extern (C++) abstract class TypeQualified : Type
 				printf("%s %s (%p) is a template parameter to %s %s (%p)\n",
 					   s.kind(), s.toChars(), s,
 					   s.toAlias().kind(), s.toAlias().toChars(), s.toAlias());
-                s = s.toAlias();
+                //s = s.toAlias();
 			}
             else
             {
@@ -5441,7 +5441,7 @@ extern (C++) abstract class TypeQualified : Type
                 if (d)
                     d.checkDisabled(loc, sc, true);
             }
-            s = s.toAlias();
+            //s = s.toAlias();
             //printf("\t2: s = '%s' %p, kind = '%s'\n",s.toChars(), s, s.kind());
             for (size_t i = 0; i < idents.dim; i++)
             {
