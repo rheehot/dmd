@@ -600,9 +600,9 @@ dmd -cov -unittest myprog.d
     static immutable transitions = [
         Transition("3449", "field", "vfield",
             "list all non-mutable fields which occupy an object instance"),
-        Transition("10378", "import", "bug10378",
+        Transition("10378", "import", null,
             "revert to single phase name lookup"),
-        Transition(null, "checkimports", "check10378",
+        Transition(null, "checkimports", null,
             "give deprecation messages about 10378 anomalies"),
         Transition("14488", "complex", "vcomplex",
             "give deprecation messages about all usages of complex or imaginary types"),

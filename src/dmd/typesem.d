@@ -3526,25 +3526,7 @@ private extern(C++) final class DotExpVisitor : Visitor
         Dsymbol searchSym()
         {
             int flags = sc.flags & SCOPE.ignoresymbolvisibility ? IgnoreSymbolVisibility : 0;
-
-            Dsymbol sold = void;
-            if (global.params.bug10378 || global.params.check10378)
-            {
-                sold = mt.sym.search(e.loc, ident, flags);
-                if (!global.params.check10378)
-                    return sold;
-            }
-
-            auto s = mt.sym.search(e.loc, ident, flags | IgnorePrivateImports);
-            if (global.params.check10378)
-            {
-                alias snew = s;
-                if (sold !is snew)
-                    Scope.deprecation10378(e.loc, sold, snew);
-                if (global.params.bug10378)
-                    s = sold;
-            }
-            return s;
+            return mt.sym.search(e.loc, ident, flags | IgnorePrivateImports);
         }
 
         s = searchSym();
@@ -3865,28 +3847,12 @@ private extern(C++) final class DotExpVisitor : Visitor
         Dsymbol searchSym()
         {
             int flags = sc.flags & SCOPE.ignoresymbolvisibility ? IgnoreSymbolVisibility : 0;
-            Dsymbol sold = void;
-            if (global.params.bug10378 || global.params.check10378)
-            {
-                sold = mt.sym.search(e.loc, ident, flags | IgnoreSymbolVisibility);
-                if (!global.params.check10378)
-                    return sold;
-            }
-
             auto s = mt.sym.search(e.loc, ident, flags | SearchLocalsOnly);
             if (!s && !(flags & IgnoreSymbolVisibility))
             {
                 s = mt.sym.search(e.loc, ident, flags | SearchLocalsOnly | IgnoreSymbolVisibility);
                 if (s && !(flags & IgnoreErrors))
                     .deprecation(e.loc, "`%s` is not visible from class `%s`", s.toPrettyChars(), mt.sym.toChars());
-            }
-            if (global.params.check10378)
-            {
-                alias snew = s;
-                if (sold !is snew)
-                    Scope.deprecation10378(e.loc, sold, snew);
-                if (global.params.bug10378)
-                    s = sold;
             }
             return s;
         }

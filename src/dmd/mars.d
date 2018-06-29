@@ -1796,7 +1796,7 @@ private bool parseCommandLine(const ref Strings arguments, const size_t argc, re
                             string buf;
                             foreach (t; Usage.transitions)
                             {
-                                if (t.bugzillaNumber !is null)
+                                if (t.bugzillaNumber !is null && t.paramName.length)
                                     buf ~= `case `~t.bugzillaNumber~`: params.`~t.paramName~` = true;break;`;
                             }
                             return buf;
@@ -1817,12 +1817,19 @@ private bool parseCommandLine(const ref Strings arguments, const size_t argc, re
                             import dmd.cli : Usage;
                             string buf = `case "all":`;
                             foreach (t; Usage.transitions)
-                                buf ~= `params.`~t.paramName~` = true;`;
+                                if (t.paramName.length)
+                                    buf ~= `params.` ~ t.paramName ~ ` = true;`;
                             buf ~= "break;";
 
                             foreach (t; Usage.transitions)
                             {
-                                buf ~= `case "`~t.name~`": params.`~t.paramName~` = true;break;`;
+                                buf ~= `case "`  ~ t.name ~ `": `;
+                                if (t.paramName.length)
+                                    buf ~= `params.` ~ t.paramName ~ ` = true; `;
+                                else
+                                    buf ~= `Loc loc; deprecation(loc, "Switch '-transition=`
+                                        ~ t.name ~ `' is deprecated and has no effect"); `;
+                                buf ~= `break; `;
                             }
                             return buf;
                         }

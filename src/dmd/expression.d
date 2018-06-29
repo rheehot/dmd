@@ -691,17 +691,6 @@ private Expression searchUFCS(Scope* sc, UnaExp ue, Identifier ident)
     if (sc.flags & SCOPE.ignoresymbolvisibility)
         flags |= IgnoreSymbolVisibility;
 
-    Dsymbol sold = void;
-    if (global.params.bug10378 || global.params.check10378)
-    {
-        sold = searchScopes(flags | IgnoreSymbolVisibility);
-        if (!global.params.check10378)
-        {
-            s = sold;
-            goto Lsearchdone;
-        }
-    }
-
     // First look in local scopes
     s = searchScopes(flags | SearchLocalsOnly);
     if (!s)
@@ -723,15 +712,6 @@ private Expression searchUFCS(Scope* sc, UnaExp ue, Identifier ident)
                 .deprecation(loc, "`%s` is not visible from module `%s`", s.toPrettyChars(), sc._module.toChars());
         }
     }
-    if (global.params.check10378)
-    {
-        alias snew = s;
-        if (sold !is snew)
-            Scope.deprecation10378(loc, sold, snew);
-        if (global.params.bug10378)
-            s = sold;
-    }
-Lsearchdone:
 
     if (!s)
         return ue.e1.type.Type.getProperty(loc, ident, 0);
