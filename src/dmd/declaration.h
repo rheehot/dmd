@@ -125,7 +125,7 @@ void ObjectNotFound(Identifier *id);
 class Declaration : public Dsymbol
 {
 public:
-    Type *type;
+    Type *_type;
     Type *originalType;         // before semantic analysis
     StorageClass storage_class;
     Prot protection;
@@ -135,6 +135,8 @@ public:
 
     const char *kind() const;
     d_uns64 size(const Loc &loc);
+    Type* type () { return this->_type; }
+    void type (Type* n) { this->_type = n; }
     bool checkDisabled(Loc loc, Scope* sc, bool isAliasedDeclaration = false);
     int checkModify(Loc loc, Scope *sc, Expression *e1, int flag);
 
@@ -577,6 +579,8 @@ public:
     FuncDeclarations *inlinedNestedCallees;
 
     unsigned flags;                     // FUNCFLAGxxxxx
+
+    void type (TypeFunction* n) { this->_type = n; }
 
     static FuncDeclaration *create(const Loc &loc, const Loc &endloc, Identifier *id, StorageClass storage_class, Type *type);
     Dsymbol *syntaxCopy(Dsymbol *);

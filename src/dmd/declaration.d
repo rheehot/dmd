@@ -282,7 +282,7 @@ struct Match
  */
 extern (C++) abstract class Declaration : Dsymbol
 {
-    Type type;
+    protected Type _type;
     Type originalType;  // before semantic analysis
     StorageClass storage_class;
     Prot protection;
@@ -309,6 +309,19 @@ extern (C++) abstract class Declaration : Dsymbol
     {
         assert(type);
         return type.size();
+    }
+
+    /// Returns: the type of this `Declaration`
+    inout(Type) type () @property @safe pure nothrow @nogc inout
+    {
+        return this._type;
+    }
+
+    /// Params:
+    ///   t = The new type of this declaration
+    void type (Type t) @property @safe pure nothrow @nogc
+    {
+        this._type = t;
     }
 
     /**

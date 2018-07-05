@@ -300,6 +300,26 @@ extern (C++) class FuncDeclaration : Declaration
         inferRetType = (type && type.nextOf() is null);
     }
 
+    /// Returns: the type of this `Declaration`
+    override inout(TypeFunction) type () @property @safe pure nothrow @nogc inout
+    {
+        return cast(typeof(return)) this._type;
+    }
+
+    /// Params:
+    ///   t = The new type of this declaration
+    override void type (Type t) @property @safe pure nothrow @nogc
+    {
+        assert(t.ty == Tfunction);
+        this.type(cast(TypeFunction)t);
+    }
+
+    /// Ditto
+    void type (TypeFunction t) @property @safe pure nothrow @nogc
+    {
+        this._type = t;
+    }
+
     static FuncDeclaration create(const ref Loc loc, const ref Loc endloc, Identifier id, StorageClass storage_class, Type type)
     {
         return new FuncDeclaration(loc, endloc, id, storage_class, type);
@@ -3776,4 +3796,3 @@ extern (C++) final class DeleteDeclaration : FuncDeclaration
         v.visit(this);
     }
 }
-
