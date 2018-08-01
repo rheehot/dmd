@@ -282,8 +282,6 @@ struct Match
  */
 extern (C++) abstract class Declaration : Dsymbol
 {
-    Type type;
-    Type originalType;  // before semantic analysis
     StorageClass storage_class;
     Prot protection;
     LINK linkage;
@@ -310,6 +308,20 @@ extern (C++) abstract class Declaration : Dsymbol
         assert(type);
         return type.size();
     }
+
+    /**
+     * Access the type of this declaration
+     *
+     * Subclass should implement this and aim to provide the most specialized
+     * type as a return value.
+     * E.g. `FuncDeclaration` should return `TypeFunction`, not `Type`.
+     *
+     * Returns:
+     *   The `Type` of this declaration (`null` if semantic hasn't been run)
+     */
+    abstract inout(Type) type() inout @property;
+    /// Access the `type` before semantic analysis
+    abstract inout(Type) originalType() inout @property;
 
     /**
      * Issue an error if an attempt to call a disabled method is made
@@ -578,6 +590,9 @@ extern (C++) final class TupleDeclaration : Declaration
         return "tuple";
     }
 
+    override inout(Type) type() inout @property { return null; }
+    override inout(Type) originalType() inout @property { return null; }
+
     override Type getType()
     {
         /* If this tuple represents a type, return that type
@@ -687,6 +702,7 @@ extern (C++) final class TupleDeclaration : Declaration
  */
 extern (C++) final class AliasDeclaration : Declaration
 {
+    Type type_, originalType_;
     Dsymbol aliassym;
     Dsymbol overnext;   // next in overload list
     Dsymbol _import;    // !=null if unresolved internal alias for selective import
@@ -697,7 +713,7 @@ extern (C++) final class AliasDeclaration : Declaration
         //printf("AliasDeclaration(id = '%s', type = %p)\n", id.toChars(), type);
         //printf("type = '%s'\n", type.toChars());
         this.loc = loc;
-        this.type = type;
+        this.type_ = type;
         assert(type);
     }
 
@@ -710,6 +726,9 @@ extern (C++) final class AliasDeclaration : Declaration
         this.aliassym = s;
         assert(s);
     }
+
+    override inout(Type) type() @property inout { return this.type_; }
+    override inout(Type) originalType() @property inout { return this.originalType_; }
 
     static AliasDeclaration create(Loc loc, Identifier id, Type type)
     {
@@ -1064,6 +1083,7 @@ extern (C++) final class OverDeclaration : Declaration
  */
 extern (C++) class VarDeclaration : Declaration
 {
+    Type type_, originalType_;
     Initializer _init;
     uint offset;
     uint sequenceNumber;            // order the variables are declared
@@ -1112,13 +1132,16 @@ extern (C++) class VarDeclaration : Declaration
         }
 
         assert(type || _init);
-        this.type = type;
+        this.type_ = type;
         this._init = _init;
         this.loc = loc;
         ctfeAdrOnStack = -1;
         this.storage_class = storage_class;
         sequenceNumber = ++nextSequenceNumber;
     }
+
+    override inout(Type) type() @property inout { return this.type_; }
+    override inout(Type) originalType() @property inout { return this.originalType_; }
 
     override Dsymbol syntaxCopy(Dsymbol s)
     {
