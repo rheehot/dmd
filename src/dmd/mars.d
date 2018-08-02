@@ -1387,6 +1387,8 @@ void addDefaultVersionIdentifiers()
         VersionCondition.addPredefinedGlobalIdent("assert");
     if (global.params.useArrayBounds == CHECKENABLE.off)
         VersionCondition.addPredefinedGlobalIdent("D_NoBoundsChecks");
+    else // Introduced in 2.082.0 - Deprecate `D_NoBoundsChecks` later
+        VersionCondition.addPredefinedGlobalIdent("D_BoundsChecks");
     if (global.params.betterC)
     {
         VersionCondition.addPredefinedGlobalIdent("D_BetterC");

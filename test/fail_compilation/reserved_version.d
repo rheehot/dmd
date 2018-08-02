@@ -100,10 +100,9 @@ fail_compilation/reserved_version.d(201): Error: version identifier `none` is re
 fail_compilation/reserved_version.d(202): Error: version identifier `AsmJS` is reserved and cannot be set
 fail_compilation/reserved_version.d(203): Error: version identifier `Emscripten` is reserved and cannot be set
 fail_compilation/reserved_version.d(204): Error: version identifier `WebAssembly` is reserved and cannot be set
+fail_compilation/reserved_version.d(205): Error: version identifier `D_BoundsChecks` is reserved and cannot be set
 ---
 */
-
-// Some extra empty lines to help fixup the manual line numbering after adding new version identifiers
 
 #line 105
 version = MSP430;
@@ -206,6 +205,7 @@ version = none;
 version = AsmJS;
 version = Emscripten;
 version = WebAssembly;
+version = D_BoundsChecks;
 
 // This should work though
 debug = DigitalMars;
@@ -303,3 +303,4 @@ debug = all;
 debug = none;
 debug = D_P16;
 debug = MSP430;
+debug = D_BoundsChecks;
