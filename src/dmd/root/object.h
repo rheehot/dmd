@@ -16,6 +16,7 @@
 #pragma once
 #endif
 
+#include "dcompat.h"
 #include <stddef.h>
 
 typedef size_t hash_t;
@@ -57,6 +58,7 @@ public:
     virtual void print();
 
     virtual const char *toChars();
+    virtual DArray<const char> toString();
     virtual void toBuffer(OutBuffer *buf);
 
     /**

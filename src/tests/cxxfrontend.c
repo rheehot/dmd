@@ -212,6 +212,11 @@ void test_semantic()
     semantic2(m, NULL);
     semantic3(m, NULL);
 
+    // Basic test for D slice passing
+    DArray<const char> sl = m->toString();
+    assert(sl.length == 6);
+    assert(strncmp(sl.ptr, "object", 6) == 0);
+
     assert(!global.endGagging(errors));
 }
 

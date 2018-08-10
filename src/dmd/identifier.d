@@ -74,7 +74,7 @@ nothrow:
         return name;
     }
 
-    extern (D) final const(char)[] toString() const pure
+    extern (D) final override const(char)[] toString() const pure
     {
         return name[0 .. len];
     }
