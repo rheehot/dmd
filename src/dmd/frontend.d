@@ -79,11 +79,11 @@ string findDMDConfig(const(char)[] dmdFilePath)
     import dmd.dinifile : findConfFile;
     import std.string : fromStringz, toStringz;
 
-    auto f = findConfFile(dmdFilePath.toStringz, "dmd.conf");
+    auto f = findConfFile(dmdFilePath, "dmd.conf");
     if (f is null)
         return null;
 
-    return f.fromStringz.idup;
+    return f.idup;
 }
 
 /**
