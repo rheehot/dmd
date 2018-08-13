@@ -81,18 +81,34 @@ nothrow:
      */
     extern (C++) static bool absolute(const(char)* name) pure
     {
+        return absolute(name.toDString);
+    }
+
+    /// Ditto
+    extern (D) static bool absolute(const(char)[] name) pure
+    {
+        if (!name.length)
+            return false;
+
         version (Windows)
         {
-            return (*name == '\\') || (*name == '/') || (*name && name[1] == ':');
+            return (name[0] == '\\') || (name[0] == '/')
+                || (name.length >= 2 && name[1] == ':');
         }
         else version (Posix)
         {
-            return (*name == '/');
+            return (name[0] == '/');
         }
         else
         {
             assert(0);
         }
+    }
+
+    unittest
+    {
+        assert(absolute("/"[]) == true);
+        assert(absolute(""[]) == false);
     }
 
     /**
@@ -120,34 +136,42 @@ nothrow:
      */
     extern (C++) static const(char)* ext(const(char)* str) pure
     {
-        size_t len = strlen(str);
-        const(char)* e = str + len;
-        for (;;)
+        return ext(str.toDString).ptr;
+    }
+
+    /// Ditto
+    extern (D) static const(char)[] ext(const(char)[] str) nothrow pure @safe @nogc
+    {
+        foreach_reverse (idx, char e; str)
         {
-            switch (*e)
+            switch (e)
             {
             case '.':
-                return e + 1;
-                version (Posix)
-                {
-                case '/':
-                    break;
-                }
-                version (Windows)
-                {
-                case '\\':
-                case ':':
-                case '/':
-                    break;
-                }
-            default:
-                if (e == str)
-                    break;
-                e--;
-                continue;
+                return str[idx + 1 .. $];
+            version (Posix)
+            {
+            case '/':
+                break;
             }
-            return null;
+            version (Windows)
+            {
+            case '\\':
+            case ':':
+            case '/':
+                break;
+            }
+            default:
+                break;
+            }
         }
+        return null;
+    }
+
+    unittest
+    {
+        assert(ext("/foo/bar/dmd.conf"[]) == "conf");
+        assert(ext("/foo/bar/dmd"[]) == null);
+        assert(ext([]) == null);
     }
 
     extern (C++) const(char)* ext() const pure
@@ -181,46 +205,52 @@ nothrow:
      */
     extern (C++) static const(char)* name(const(char)* str) pure
     {
-        size_t len = strlen(str);
-        const(char)* e = str + len;
-        for (;;)
+        return name(str.toDString).ptr;
+    }
+
+    /// Ditto
+    extern (D) static const(char)[] name(const(char)[] str) pure
+    {
+        foreach_reverse (idx, char e; str)
         {
-            switch (*e)
+            switch (e)
             {
                 version (Posix)
                 {
                 case '/':
-                    return e + 1;
+                    return str[idx + 1 .. $];
                 }
                 version (Windows)
                 {
                 case '/':
                 case '\\':
-                    return e + 1;
+                    return str[idx + 1 .. $];
                 case ':':
                     /* The ':' is a drive letter only if it is the second
                      * character or the last character,
                      * otherwise it is an ADS (Alternate Data Stream) separator.
                      * Consider ADS separators as part of the file name.
                      */
-                    if (e == str + 1 || e == str + len - 1)
-                        return e + 1;
-                    goto default;
+                    if (idx == 1 || idx == str.length - 1)
+                        return str[idx + 1 .. $];
+                    break;
                 }
             default:
-                if (e == str)
-                    break;
-                e--;
-                continue;
+                break;
             }
-            return e;
         }
-        assert(0);
+        return str;
     }
 
     extern (C++) const(char)* name() const pure
     {
         return name(str);
+    }
+
+    unittest
+    {
+        assert(name("/foo/bar/object.d"[]) == "object.d");
+        assert(name("/foo/bar/frontend.di"[]) == "frontend.di");
     }
 
     /**************************************
@@ -229,30 +259,42 @@ nothrow:
      */
     extern (C++) static const(char)* path(const(char)* str)
     {
-        const(char)* n = name(str);
-        size_t pathlen;
-        if (n > str)
+        return path(str.toDString).ptr;
+    }
+
+    /// Ditto
+    extern (D) static const(char)[] path(const(char)[] str)
+    {
+        const n = name(str);
+        bool hasTrailingSlash;
+        if (n.length < str.length)
         {
             version (Posix)
             {
-                if (n[-1] == '/')
-                    n--;
+                if (str[$ - n.length - 1] == '/')
+                    hasTrailingSlash = true;
             }
             else version (Windows)
             {
-                if (n[-1] == '\\' || n[-1] == '/')
-                    n--;
+                if (str[$ - n.length - 1] == '\\' || str[$ - n.length - 1] == '/')
+                    hasTrailingSlash = true;
             }
             else
             {
                 assert(0);
             }
         }
-        pathlen = n - str;
+        const pathlen = str.length - n.length - (hasTrailingSlash ? 1 : 0);
         char* path = cast(char*)mem.xmalloc(pathlen + 1);
-        memcpy(path, str, pathlen);
+        memcpy(path, str.ptr, pathlen);
         path[pathlen] = 0;
-        return path;
+        return path[0 .. pathlen];
+    }
+
+    unittest
+    {
+        assert(path("/foo/bar"[]) == "/foo");
+        assert(path("foo"[]) == "");
     }
 
     /**************************************
@@ -295,39 +337,62 @@ nothrow:
         return f;
     }
 
+    /**
+       Combine a `path` and a file `name`
+
+       Returns:
+         The `\0` terminated string which is the combination of `path` and `name`
+         and a valid path.
+    */
     extern (C++) static const(char)* combine(const(char)* path, const(char)* name)
     {
-        char* f;
-        size_t pathlen;
-        size_t namelen;
-        if (!path || !*path)
-            return cast(char*)name;
-        pathlen = strlen(path);
-        namelen = strlen(name);
-        f = cast(char*)mem.xmalloc(pathlen + 1 + namelen + 1);
-        memcpy(f, path, pathlen);
+        if (!path)
+            return name;
+        return combine(path.toDString, name.toDString).ptr;
+    }
+
+    /// Ditto
+    extern(D) static const(char)[] combine(const(char)[] path, const(char)[] name)
+    {
+        if (!path.length)
+            return name;
+
+        char* f = cast(char*)mem.xmalloc(path.length + 1 + name.length + 1);
+        memcpy(f, path.ptr, path.length);
+        bool trailingSlash = false;
         version (Posix)
         {
-            if (path[pathlen - 1] != '/')
+            if (path[$ - 1] != '/')
             {
-                f[pathlen] = '/';
-                pathlen++;
+                f[path.length] = '/';
+                trailingSlash = true;
             }
         }
         else version (Windows)
         {
-            if (path[pathlen - 1] != '\\' && path[pathlen - 1] != '/' && path[pathlen - 1] != ':')
+            if (path[$ - 1] != '\\' && path[$ - 1] != '/' && path[$ - 1] != ':')
             {
-                f[pathlen] = '\\';
-                pathlen++;
+                f[path.length] = '\\';
+                trailingSlash = true;
             }
         }
         else
         {
             assert(0);
         }
-        memcpy(f + pathlen, name, namelen + 1);
-        return f;
+        const len = path.length + (trailingSlash ? 1 : 0);
+        memcpy(f + len, name.ptr, name.length);
+        // Note: At the moment `const(char)*` are being transitioned to
+        // `const(char)[]`. To avoid bugs crippling in, we `\0` terminate
+        // slices, but don't include it in the slice so `.ptr` can be used.
+        f[len + name.length] = '\0';
+        return f[0 .. len + name.length];
+    }
+
+    unittest
+    {
+        assert(combine("foo"[], "bar"[]) == "foo/bar");
+        assert(combine("foo/"[], "bar"[]) == "foo/bar");
     }
 
     static const(char)* buildPath(const(char)* path, const(char)*[] names...)
