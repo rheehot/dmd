@@ -37,15 +37,16 @@ private enum LOG = false;
  *      file path of the config file or NULL
  *      Note: this is a memory leak
  */
-const(char)* findConfFile(const(char)* argv0, const(char)* inifile)
+const(char)[] findConfFile(const(char)[] argv0, const(char)[] inifile)
 {
     static if (LOG)
     {
-        printf("findinifile(argv0 = '%s', inifile = '%s')\n", argv0, inifile);
+        printf("findinifile(argv0 = '%*s', inifile = '%*s')\n",
+               argv0.length, argv0.ptr, inifile.length, inifile.ptr);
     }
     if (FileName.absolute(inifile))
         return inifile;
-    if (FileName.exists(inifile))
+    if (FileName.exists(inifile.ptr))
         return inifile;
     /* Look for inifile in the following sequence of places:
      *      o current directory
@@ -54,8 +55,9 @@ const(char)* findConfFile(const(char)* argv0, const(char)* inifile)
      *      o directory off of argv0
      *      o SYSCONFDIR=/etc (non-windows)
      */
-    auto filename = FileName.combine(getenv("HOME"), inifile);
-    if (FileName.exists(filename))
+    const home = getenv("HOME");
+    const(char)[] filename = FileName.combine(home[0 .. strlen(home)], inifile);
+    if (FileName.exists(filename.ptr))
         return filename;
     version (Windows)
     {
@@ -63,36 +65,37 @@ const(char)* findConfFile(const(char)* argv0, const(char)* inifile)
         char[MAX_PATH + 1] resolved_name;
         if (GetModuleFileNameA(null, resolved_name.ptr, MAX_PATH + 1) && FileName.exists(resolved_name.ptr))
         {
-            filename = FileName.replaceName(resolved_name.ptr, inifile);
+            filename = FileName.replaceName(resolved_name, inifile);
             if (FileName.exists(filename))
                 return filename;
         }
     }
     filename = FileName.replaceName(argv0, inifile);
-    if (FileName.exists(filename))
+    if (FileName.exists(filename.ptr))
         return filename;
     version (Posix)
     {
         // Search PATH for argv0
-        auto p = getenv("PATH");
+        const p = getenv("PATH");
         static if (LOG)
         {
             printf("\tPATH='%s'\n", p);
         }
         auto paths = FileName.splitPath(p);
-        auto abspath = FileName.searchPath(paths, argv0, false);
+        auto abspath_ptr = FileName.searchPath(paths, argv0.ptr, false);
+        auto abspath = abspath_ptr ? abspath_ptr[0 .. strlen(abspath_ptr)] : null;
         if (abspath)
         {
             auto absname = FileName.replaceName(abspath, inifile);
-            if (FileName.exists(absname))
+            if (FileName.exists(absname.ptr))
                 return absname;
         }
         // Resolve symbolic links
-        filename = FileName.canonicalName(abspath ? abspath : argv0);
-        if (filename)
+        auto ptr = FileName.canonicalName(abspath ? abspath.ptr : argv0.ptr);
+        if (ptr)
         {
-            filename = FileName.replaceName(filename, inifile);
-            if (FileName.exists(filename))
+            filename = FileName.replaceName(ptr[0 .. strlen(ptr)], inifile);
+            if (FileName.exists(filename.ptr))
                 return filename;
         }
         // Search SYSCONFDIR=/etc for inifile
