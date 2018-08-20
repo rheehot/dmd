@@ -20,7 +20,6 @@ import core.sys.posix.unistd;
 import core.sys.windows.windows;
 import dmd.root.filename;
 import dmd.root.rmem;
-import dmd.utils;
 
 /***********************************************************
  */
@@ -200,8 +199,8 @@ nothrow:
 
             // work around Windows file path length limitation
             // (see documentation for extendedPathThen).
-            HANDLE h = name.toDString.extendedPathThen!
-                (p => CreateFileW(p.ptr,
+            HANDLE h = name.extendedPathThen!
+                (p => CreateFileW(p,
                                   GENERIC_READ,
                                   FILE_SHARE_READ,
                                   null,
@@ -275,8 +274,8 @@ nothrow:
             const(char)* name = this.name.toChars();
             // work around Windows file path length limitation
             // (see documentation for extendedPathThen).
-            HANDLE h = name.toDString.extendedPathThen!
-                (p => CreateFileW(p.ptr,
+            HANDLE h = name.extendedPathThen!
+                (p => CreateFileW(p,
                                   GENERIC_WRITE,
                                   0,
                                   null,
