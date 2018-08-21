@@ -406,7 +406,7 @@ private void resolveHelper(TypeQualified mt, const ref Loc loc, Scope* sc, Dsymb
         /* Look for what user might have intended
          */
         const p = mt.mutableOf().unSharedOf().toChars();
-        auto id = Identifier.idPool(p, cast(uint)strlen(p));
+        auto id = Identifier.idPool(p, strlen(p));
         if (const n = importHint(p))
             error(loc, "`%s` is not defined, perhaps `import %s;` ?", p, n);
         else if (auto s2 = sc.search_correct(id))

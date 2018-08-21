@@ -711,7 +711,7 @@ extern (C++) struct Token
         foreach (kw; keywords)
         {
             //printf("keyword[%d] = '%s'\n",kw, tochars[kw].ptr);
-            Identifier.idPool(tochars[kw].ptr, tochars[kw].length, cast(uint)kw);
+            Identifier.idPool(tochars[kw].ptr, tochars[kw].length, kw);
         }
     }
 
