@@ -48,21 +48,6 @@ extern (C++) void error(const ref Loc loc, const(char)* format, ...)
 }
 
 /**
- * Same as above, but allows Loc() literals to be passed.
- * Params:
- *      loc    = location of error
- *      format = printf-style format specification
- *      ...    = printf-style variadic arguments
- */
-extern (D) void error(Loc loc, const(char)* format, ...)
-{
-    va_list ap;
-    va_start(ap, format);
-    verror(loc, format, ap);
-    va_end(ap);
-}
-
-/**
  * Same as above, but takes a filename and line information arguments as separate parameters.
  * Params:
  *      filename = source file of error
