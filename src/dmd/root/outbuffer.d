@@ -329,7 +329,12 @@ struct OutBuffer
         offset += count;
     }
 
-    extern (C++) void printf(const(char)* format, ...) nothrow
+    extern (D) void printf(Args...)(const(char)* format, Args args) nothrow
+    {
+        cprintf(format, mapSlicesForPrintf!args);
+    }
+
+    extern (C++) void cprintf(const(char)* format, ...) nothrow
     {
         va_list ap;
         va_start(ap, format);
@@ -422,6 +427,33 @@ struct OutBuffer
         if (!offset || data[offset - 1] != '\0')
             writeByte(0);
         return extractData();
+    }
+}
+
+/**
+Utility to turn a slice into a length/ptr couple
+for printf-like interfaces
+
+Takes a variadic list of aliases to arguments,
+and map any string slice (char[], const(char)[], string)
+to `(cast(int)slice.length, slice.ptr)`
+*/
+template mapSlicesForPrintf(T...)
+{
+    /// Just like Phobos' AliasSeq, but without importing Phobos
+    private static template AliasSeq (A...)
+    {
+        alias AliasSeq = A;
+    }
+
+    static if (T.length == 0)
+        alias mapSlicesForPrintf = T;
+    else
+    {
+        static if (is(typeof(T[0]) : const(char)[]))
+            alias mapSlicesForPrintf = AliasSeq!(cast(int)(T[0].length), T[0].ptr, mapSlicesForPrintf!(T[1 .. $]));
+        else
+            alias mapSlicesForPrintf = AliasSeq!(T[0], mapSlicesForPrintf!(T[1 .. $]));
     }
 }
 

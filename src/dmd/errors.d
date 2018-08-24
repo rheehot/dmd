@@ -2,6 +2,19 @@
  * Compiler implementation of the
  * $(LINK2 http://www.dlang.org, D programming language).
  *
+ * This module provides up to 3 kinds of overload to a given function:
+ * - A va_arg accepting function which will be the actual implementation
+ *   This overload is not always present
+ * - A C++ facing implementation, with the prefix 'c' (`cerror`, `cwarning`,
+ *   `cmessage`...) which accept C-style varargs.
+ * - An `extern(D)` wrapper to the 'c'-prefixed implementation which accepts
+ *   variadic template arguments.
+ *
+ *   The goal of the wrapper is to turn slices into the length/ptr pair that
+ *   is accepted by printf. This wrapper does not alter the format string,
+ *   and as such the user should call `cmessage("%.*s", my_string)`
+ *   and not `cmessage("%s", my_string)` as this could result in a SIGSEGV
+ *
  * Copyright:   Copyright (C) 1999-2018 by The D Language Foundation, All Rights Reserved
  * Authors:     $(LINK2 http://www.digitalmars.com, Walter Bright)
  * License:     $(LINK2 http://www.boost.org/LICENSE_1_0.txt, Boost License 1.0)
@@ -20,6 +33,7 @@ import dmd.globals;
 import dmd.root.outbuffer;
 import dmd.root.rmem;
 import dmd.console;
+import dmd.utils;
 
 /**
  * Color highlighting to classify messages
@@ -33,13 +47,21 @@ enum Classification
 }
 
 /**
- * Print an error message, increasing the global error count.
- * Params:
- *      loc    = location of error
- *      format = printf-style format specification
- *      ...    = printf-style variadic arguments
- */
-extern (C++) void error(const ref Loc loc, const(char)* format, ...)
+Print an error message, increasing the global error count.
+
+Params:
+loc    = location of error
+format = printf-style format specification
+args   = variadic list of arguments
+...    = printf-style variadic arguments
+*/
+void error(Args...)(const ref Loc loc, const(char)* format, Args args)
+{
+    return cerror(loc, format, mapSlicesForPrintf!args);
+}
+
+/// Ditto
+extern (C++) void cerror(const ref Loc loc, const(char)* format, ...)
 {
     va_list ap;
     va_start(ap, format);
@@ -69,9 +91,16 @@ extern (D) void error(Loc loc, const(char)* format, ...)
  *      linnum   = line in the source file
  *      charnum  = column number on the line
  *      format   = printf-style format specification
+ *      args   = variadic list of arguments
  *      ...      = printf-style variadic arguments
  */
-extern (C++) void error(const(char)* filename, uint linnum, uint charnum, const(char)* format, ...)
+void error(Args...)(const(char)* filename, uint linnum, uint charnum, const(char)* format, Args args)
+{
+    cerror(filename, linnum, charnum, format, mapSlicesForPrintf!args);
+}
+
+/// Ditto
+extern (C++) void cerror(const(char)* filename, uint linnum, uint charnum, const(char)* format, ...)
 {
     const loc = Loc(filename, linnum, charnum);
     va_list ap;
@@ -86,9 +115,16 @@ extern (C++) void error(const(char)* filename, uint linnum, uint charnum, const(
  * Params:
  *      loc    = location of error
  *      format = printf-style format specification
+ *      args   = variadic list of arguments
  *      ...    = printf-style variadic arguments
  */
-extern (C++) void errorSupplemental(const ref Loc loc, const(char)* format, ...)
+void errorSupplemental(Args...)(const ref Loc loc, const(char)* format, Args args)
+{
+    cerrorSupplemental(loc, format, mapSlicesForPrintf!args);
+}
+
+/// Ditto
+extern (C++) void cerrorSupplemental(const ref Loc loc, const(char)* format, ...)
 {
     va_list ap;
     va_start(ap, format);
@@ -101,9 +137,16 @@ extern (C++) void errorSupplemental(const ref Loc loc, const(char)* format, ...)
  * Params:
  *      loc    = location of warning
  *      format = printf-style format specification
+ *      args   = variadic list of arguments
  *      ...    = printf-style variadic arguments
  */
-extern (C++) void warning(const ref Loc loc, const(char)* format, ...)
+void warning(Args...)(const ref Loc loc, const(char)* format, Args args)
+{
+    cwarning(loc, format, mapSlicesForPrintf!args);
+}
+
+/// Ditto
+extern (C++) void cwarning(const ref Loc loc, const(char)* format, ...)
 {
     va_list ap;
     va_start(ap, format);
@@ -117,9 +160,16 @@ extern (C++) void warning(const ref Loc loc, const(char)* format, ...)
  * Params:
  *      loc    = location of warning
  *      format = printf-style format specification
+ *      args   = variadic list of arguments
  *      ...    = printf-style variadic arguments
  */
-extern (C++) void warningSupplemental(const ref Loc loc, const(char)* format, ...)
+void warningSupplemental(Args...)(const ref Loc loc, const(char)* format, Args args)
+{
+    cwarningSupplemental(loc, format, mapSlicesForPrintf!args);
+}
+
+/// Ditto
+extern (C++) void cwarningSupplemental(const ref Loc loc, const(char)* format, ...)
 {
     va_list ap;
     va_start(ap, format);
@@ -133,9 +183,16 @@ extern (C++) void warningSupplemental(const ref Loc loc, const(char)* format, ..
  * Params:
  *      loc    = location of deprecation
  *      format = printf-style format specification
+ *      args   = variadic list of arguments
  *      ...    = printf-style variadic arguments
  */
-extern (C++) void deprecation(const ref Loc loc, const(char)* format, ...)
+void deprecation(Args...)(const ref Loc loc, const(char)* format, Args args)
+{
+    cdeprecation(loc, format, mapSlicesForPrintf!args);
+}
+
+/// Ditto
+extern (C++) void cdeprecation(const ref Loc loc, const(char)* format, ...)
 {
     va_list ap;
     va_start(ap, format);
@@ -149,8 +206,15 @@ extern (C++) void deprecation(const ref Loc loc, const(char)* format, ...)
  * Params:
  *      loc    = location of deprecation
  *      format = printf-style format specification
+ *      args   = variadic list of arguments
  *      ...    = printf-style variadic arguments
  */
+void deprecationSupplemental(Args...)(const ref Loc loc, const(char)* format, Args args)
+{
+    deprecationSupplemental(loc, format, mapSlice!args);
+}
+
+/// Ditto
 extern (C++) void deprecationSupplemental(const ref Loc loc, const(char)* format, ...)
 {
     va_list ap;
@@ -165,9 +229,16 @@ extern (C++) void deprecationSupplemental(const ref Loc loc, const(char)* format
  * Params:
  *      loc    = location of message
  *      format = printf-style format specification
+ *      args   = variadic list of arguments
  *      ...    = printf-style variadic arguments
  */
-extern (C++) void message(const ref Loc loc, const(char)* format, ...)
+void message(Args...)(const ref Loc loc, const(char)* format, Args args)
+{
+    cmessage(loc, format, mapSlicesForPrintf!args);
+}
+
+/// Ditto
+extern (C++) void cmessage(const ref Loc loc, const(char)* format, ...)
 {
     va_list ap;
     va_start(ap, format);
@@ -179,8 +250,15 @@ extern (C++) void message(const ref Loc loc, const(char)* format, ...)
  * Same as above, but doesn't take a location argument.
  * Params:
  *      format = printf-style format specification
+ *      args   = variadic list of arguments
  *      ...    = printf-style variadic arguments
  */
+void message(Args...)(const(char)* format, Args args)
+{
+    cmessage(format, mapSlicesForPrintf!args);
+}
+
+/// Ditto
 extern (C++) void message(const(char)* format, ...)
 {
     va_list ap;
