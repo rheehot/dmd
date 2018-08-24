@@ -2292,7 +2292,7 @@ private elem * elremquo(elem *e, goal_t goal)
 {
 static if (0) version (MARS)
     if (cnst(e.EV.E2) && !boolres(e.EV.E2))
-        error(e.Esrcpos.Sfilename, e.Esrcpos.Slinnum, e.Esrcpos.Scharnum, "divide by zero\n");
+        cerror(e.Esrcpos.Sfilename, e.Esrcpos.Slinnum, e.Esrcpos.Scharnum, "divide by zero\n");
 
     return e;
 }
@@ -2323,7 +2323,7 @@ private elem * eldiv(elem *e, goal_t goal)
     {
 static if (0) version (MARS)
       if (!boolres(e2))
-        error(e.Esrcpos.Sfilename, e.Esrcpos.Slinnum, e.Esrcpos.Scharnum, "divide by zero\n");
+        cerror(e.Esrcpos.Sfilename, e.Esrcpos.Slinnum, e.Esrcpos.Scharnum, "divide by zero\n");
 
       if (uns)
       {
@@ -5628,7 +5628,7 @@ version (MARS)
                 if (e.EV.E1.Eoper == OPconst &&
                     el_tolong(e.EV.E1) >= 0 && el_tolong(e.EV.E1) < 4096)
                 {
-                    error(pos.Sfilename, pos.Slinnum, pos.Scharnum, "null dereference in function %s", funcsym_p.Sident.ptr);
+                    cerror(pos.Sfilename, pos.Slinnum, pos.Scharnum, "null dereference in function %s", funcsym_p.Sident.ptr);
                     e.EV.E1.EV.Vlong = 4096;     // suppress redundant messages
                 }
 }

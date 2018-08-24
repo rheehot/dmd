@@ -486,7 +486,7 @@ private void chkrd(elem *n,list_t rdlist)
          */
         if (type_size(sv.Stype) != 0)
         {
-            error(n.Esrcpos.Sfilename, n.Esrcpos.Slinnum, n.Esrcpos.Scharnum,
+            cerror(n.Esrcpos.Sfilename, n.Esrcpos.Slinnum, n.Esrcpos.Scharnum,
                 "variable %s used before set", sv.Sident.ptr);
         }
     }

@@ -1084,7 +1084,7 @@ version (MARS)
             if (!boolres(e2))
             {
                 div0:
-                    error(e.Esrcpos.Sfilename, e.Esrcpos.Slinnum, e.Esrcpos.Scharnum, "divide by zero");
+                    cerror(e.Esrcpos.Sfilename, e.Esrcpos.Slinnum, e.Esrcpos.Scharnum, "divide by zero");
                     break;
             }
         }
@@ -1783,7 +1783,7 @@ static if (0) // && MARS
          */
         if (l1 >= 0 && l1 < 4096)
         {
-            error(e.Esrcpos.Sfilename, e.Esrcpos.Slinnum, e.Esrcpos.Scharnum,
+            cerror(e.Esrcpos.Sfilename, e.Esrcpos.Slinnum, e.Esrcpos.Scharnum,
                 "dereference of null pointer");
             e.EV.E1.EV.Vlong = 4096;     // suppress redundant messages
         }

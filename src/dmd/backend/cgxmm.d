@@ -1179,7 +1179,7 @@ version (MARS)
 {
             if (imm8.Eoper != OPconst)
             {
-                error(imm8.Esrcpos.Sfilename, imm8.Esrcpos.Slinnum, imm8.Esrcpos.Scharnum, "last parameter to `__simd()` must be a constant");
+                cerror(imm8.Esrcpos.Sfilename, imm8.Esrcpos.Slinnum, imm8.Esrcpos.Scharnum, "last parameter to `__simd()` must be a constant");
                 cs.IEV2.Vsize_t = 0;
             }
             else

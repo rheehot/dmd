@@ -354,7 +354,7 @@ void parseConfFile(StringTable* environment, const(char)* filename, const(char)*
                 {
                     if (!writeToEnv(environment, strdup(pn)))
                     {
-                        error(Loc(filename, lineNum, 0), "Use `NAME=value` syntax, not `%s`", pn);
+                        cerror(Loc(filename, lineNum, 0), "Use `NAME=value` syntax, not `%s`", pn);
                         fatal();
                     }
                     static if (LOG)
