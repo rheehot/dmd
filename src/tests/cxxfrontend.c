@@ -221,6 +221,14 @@ int main(int argc, char **argv)
 {
     frontend_init();
 
+    #ifdef _WIN32
+    assert(global.lib_ext.length == 3);
+    assert(memcmp(global.lib_ext.ptr, "lib", 3) == 0);
+    #else
+    assert(global.lib_ext.length == 1);
+    assert(global.lib_ext.ptr[0] == 'a');
+    #endif
+
     test_visitors();
     test_semantic();
 

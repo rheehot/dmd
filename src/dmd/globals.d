@@ -241,7 +241,7 @@ struct Global
     const(char)* inifilename;
     const(char)* mars_ext = "d";
     const(char)* obj_ext;
-    const(char)* lib_ext;
+    const(char)[] lib_ext;
     const(char)* dll_ext;
     const(char)* doc_ext = "html";      // for Ddoc generated files
     const(char)* ddoc_ext = "ddoc";     // for Ddoc macro include files

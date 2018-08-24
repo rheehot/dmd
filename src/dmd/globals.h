@@ -212,7 +212,7 @@ struct Global
     const char *inifilename;
     const char *mars_ext;
     const char *obj_ext;
-    const char *lib_ext;
+    DArray<const char> lib_ext;
     const char *dll_ext;
     const char *doc_ext;        // for Ddoc generated files
     const char *ddoc_ext;       // for Ddoc macro include files

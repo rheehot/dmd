@@ -84,18 +84,18 @@ class Library
         {
             printf("LibElf::setFilename(dir = '%s', filename = '%s')\n", dir ? dir : "", filename ? filename : "");
         }
-        const(char)* arg = filename;
-        if (!arg || !*arg)
+        auto arg = filename.toDString;
+        if (!arg.length)
         {
             // Generate lib file name from first obj name
-            const(char)* n = global.params.objfiles[0];
+            auto n = global.params.objfiles[0].toDString();
             n = FileName.name(n);
             arg = FileName.forceExt(n, global.lib_ext);
         }
         if (!FileName.absolute(arg))
-            arg = FileName.combine(dir, arg);
+            arg = FileName.combine(dir.toDString(), arg);
 
-        loc.filename = FileName.defaultExt(arg, global.lib_ext);
+        loc.filename = FileName.defaultExt(arg, global.lib_ext).ptr;
         loc.linnum = 0;
         loc.charnum = 0;
     }

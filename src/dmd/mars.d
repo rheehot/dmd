@@ -565,7 +565,7 @@ private int tryMain(size_t argc, const(char)** argv)
                 libmodules.push(files[i]);
                 continue;
             }
-            if (FileName.equals(ext, global.lib_ext))
+            if (FileName.equals(ext.toDString(), global.lib_ext))
             {
                 global.params.libfiles.push(files[i]);
                 libmodules.push(files[i]);
