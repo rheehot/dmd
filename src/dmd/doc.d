@@ -200,15 +200,14 @@ private final class ParamSection : Section
             if (isCVariadicArg(p))
                 p = p[3 .. $];
             templen = p.ptr - tempstart;
-            while (p[0] == ' ' || p[0] == '\t')
-                p = p[1 .. $];
-            if (p[0] != '=')
+            p = p.skipwhitespace(true);
+            if (!p.length || p[0] != '=')
             {
                 if (namelen)
                 {
                     p = p.skipwhitespace(true);
                     textlen = p.ptr - textstart;
-                    p = p[1 .. $];
+                    p = p[$ > 1 ? 1 : 0 .. $];
                     continue;
                 }
                 // continuation of prev macro
