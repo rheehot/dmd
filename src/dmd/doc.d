@@ -164,7 +164,7 @@ private final class ParamSection : Section
         size_t textlen = 0;
         size_t paramcount = 0;
         buf.writestring("$(DDOC_PARAMS ");
-        while (p.length)
+    Loop: while (p.length)
         {
             // Skip to start of macro
             while (1)
@@ -177,14 +177,20 @@ private final class ParamSection : Section
                     continue;
                 case '\n':
                     p = p[1 .. $];
-                    goto Lcont;
+                    continue Loop;
                 default:
                     if (isIdStart(p.ptr) || isCVariadicArg(p))
                         break;
                     if (namelen)
-                        goto Ltext;
+                    {
+                        p = p.skipwhitespace(true);
+                        textlen = p.ptr - textstart;
+                        p = p[1 .. $];
+                        continue Loop;
+                    }
                     // continuation of prev macro
-                    goto Lskipline;
+                    p = p.skipwhitespace(true);
+                    continue Loop;
                 }
                 break;
             }
@@ -199,9 +205,15 @@ private final class ParamSection : Section
             if (p[0] != '=')
             {
                 if (namelen)
-                    goto Ltext;
+                {
+                    p = p.skipwhitespace(true);
+                    textlen = p.ptr - textstart;
+                    p = p[1 .. $];
+                    continue;
+                }
                 // continuation of prev macro
-                goto Lskipline;
+                p = p.skipwhitespace(true);
+                continue;
             }
             p = p[1 .. $];
             if (namelen)
@@ -268,19 +280,6 @@ private final class ParamSection : Section
             while (p[0] == ' ' || p[0] == '\t')
                 p = p[1 .. $];
             textstart = p.ptr;
-        Ltext:
-            while (p[0] != '\n')
-                p = p[1 .. $];
-            textlen = p.ptr - textstart;
-            p = p[1 .. $];
-        Lcont:
-            continue;
-        Lskipline:
-            // Ignore this line
-            while (p[0] != '\n')
-            {
-                p = p[1 .. $];
-            }
         }
         if (namelen)
             goto L1;
@@ -1455,7 +1454,7 @@ struct DocComment
         size_t namelen = 0; // !=0 if line continuation
         const(char)* textstart = null;
         size_t textlen = 0;
-        while (p < pend)
+    Loop: while (p < pend)
         {
             // Skip to start of macro
             while (1)
@@ -1471,13 +1470,14 @@ struct DocComment
                 case '\r':
                 case '\n':
                     p++;
-                    goto Lcont;
+                    continue Loop;
                 default:
                     if (isIdStart(p))
                         break;
                     if (namelen)
                         goto Ltext; // continuation of prev macro
-                    goto Lskipline;
+                    p = p.skipwhitespace(true);
+                    continue Loop;
                 }
                 break;
             }
@@ -1503,7 +1503,8 @@ struct DocComment
             {
                 if (namelen)
                     goto Ltext; // continuation of prev macro
-                goto Lskipline;
+                p = p.skipwhitespace(true);
+                continue;
             }
             p++;
             if (p >= pend)
@@ -1532,12 +1533,6 @@ struct DocComment
             textlen = p - textstart;
             p++;
             //printf("p = %p, pend = %p\n", p, pend);
-        Lcont:
-            continue;
-        Lskipline:
-            // Ignore this line
-            while (p < pend && *p != '\r' && *p != '\n')
-                p++;
         }
     Ldone:
         if (namelen)
@@ -1762,16 +1757,14 @@ struct DocComment
                 if (utd.protection.kind == Prot.Kind.private_ || !utd.comment || !utd.fbody)
                     continue;
                 // Strip whitespaces to avoid showing empty summary
-                const(char)* c = utd.comment;
-                while (*c == ' ' || *c == '\t' || *c == '\n' || *c == '\r')
-                    ++c;
+                const(char)[] c = utd.comment.toDString().skipwhitespace();
                 buf.writestring("$(DDOC_EXAMPLES ");
                 size_t o = buf.offset;
-                buf.writestring(cast(char*)c);
+                buf.writestring(c);
                 if (utd.codedoc)
                 {
-                    auto codedoc = utd.codedoc.stripLeadingNewlines;
-                    size_t n = getCodeIndent(codedoc);
+                    auto codedoc = utd.codedoc.toDString().skipwhitespace(true);
+                    size_t n = getCodeIndent(codedoc.ptr);
                     while (n--)
                         buf.writeByte(' ');
                     buf.writestring("----\n");
@@ -1808,16 +1801,21 @@ private bool isDitto(const(char)* comment)
     return false;
 }
 
-/**********************************************
- * Skip white space.
+/**
+ Skip white space
+
+ Params:
+   p = the string to strip of its whitespace and newlines
+   onlyNewlines = when `true`, only skip `'\r'` and `'\n'`,
+                  not `' '` and `'\t'`
  */
-private const(char)* skipwhitespace(const(char)* p)
+private const(char)* skipwhitespace(const(char)* p, bool onlyNewlines = false)
 {
-    return skipwhitespace(p.toDString).ptr;
+    return skipwhitespace(p.toDString, onlyNewlines).ptr;
 }
 
 /// Ditto
-private const(char)[] skipwhitespace(const(char)[] p)
+private const(char)[] skipwhitespace(const(char)[] p, bool onlyNewlines = false)
 {
     foreach (idx, char c; p)
     {
@@ -1825,6 +1823,10 @@ private const(char)[] skipwhitespace(const(char)[] p)
         {
         case ' ':
         case '\t':
+            if (onlyNewlines)
+                goto default;
+            goto case;
+        case '\r':
         case '\n':
             continue;
         default:
@@ -1916,7 +1918,7 @@ private size_t skippastURL(OutBuffer* buf, size_t i)
         j = 8;
     }
     else
-        goto Lno;
+        return i;
     for (; j < slice.length; j++)
     {
         const c = slice[j];
@@ -1934,7 +1936,6 @@ private size_t skippastURL(OutBuffer* buf, size_t i)
     }
     if (sawdot)
         return i + j;
-Lno:
     return i;
 }
 
@@ -2768,12 +2769,4 @@ int utfStride(const(char)* p)
     size_t i = 0;
     utf_decodeChar(p, 4, i, c); // ignore errors, but still consume input
     return cast(int)i;
-}
-
-private inout(char)* stripLeadingNewlines(inout(char)* s)
-{
-    while (s && *s == '\n' || *s == '\r')
-        s++;
-
-    return s;
 }
