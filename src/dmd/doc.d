@@ -1602,8 +1602,7 @@ struct DocComment
         const(char)* p;
         const(char)* pstart;
         const(char)* pend;
-        const(char)* idstart = null; // dead-store to prevent spurious warning
-        size_t idlen;
+        const(char)[] identifier;
         const(char)* name = null;
         size_t namelen = 0;
         //printf("parseSections('%s')\n", comment);
@@ -1618,7 +1617,7 @@ struct DocComment
              *      'identifier:' (but not inside a code section)
              *      '\0'
              */
-            idlen = 0;
+            identifier = null;
             int inCode = 0;
             while (1)
             {
@@ -1652,8 +1651,7 @@ struct DocComment
                     if (*q == ':' && isupper(*p)
                             && (isspace(q[1]) || q[1] == 0))
                     {
-                        idlen = q - p;
-                        idstart = p;
+                        identifier = p[0 .. (q - p)];
                         for (pend = p; pend > pstart; pend--)
                         {
                             if (pend[-1] == '\n')
@@ -1701,10 +1699,10 @@ struct DocComment
                 if (!summary && !namelen)
                     summary = s;
             }
-            if (idlen)
+            if (identifier.length)
             {
-                name = idstart;
-                namelen = idlen;
+                name = identifier.ptr;
+                namelen = identifier.length;
             }
             else
             {
