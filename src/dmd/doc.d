@@ -155,8 +155,7 @@ private final class ParamSection : Section
     {
         assert(a.dim);
         Dsymbol s = (*a)[0]; // test
-        const(char)* p = _body.ptr;
-        const(char)* pend = p + _body.length;
+        const(char)[] p = _body;
         const(char)* tempstart = null;
         size_t templen = 0;
         const(char)* namestart = null;
@@ -165,22 +164,22 @@ private final class ParamSection : Section
         size_t textlen = 0;
         size_t paramcount = 0;
         buf.writestring("$(DDOC_PARAMS ");
-        while (p < pend)
+        while (p.length)
         {
             // Skip to start of macro
             while (1)
             {
-                switch (*p)
+                switch (p[0])
                 {
                 case ' ':
                 case '\t':
-                    p++;
+                    p = p[1 .. $];
                     continue;
                 case '\n':
-                    p++;
+                    p = p[1 .. $];
                     goto Lcont;
                 default:
-                    if (isIdStart(p) || isCVariadicArg(p[0 .. cast(size_t)(pend - p)]))
+                    if (isIdStart(p.ptr) || isCVariadicArg(p))
                         break;
                     if (namelen)
                         goto Ltext;
@@ -189,22 +188,22 @@ private final class ParamSection : Section
                 }
                 break;
             }
-            tempstart = p;
-            while (isIdTail(p))
-                p += utfStride(p);
-            if (isCVariadicArg(p[0 .. cast(size_t)(pend - p)]))
-                p += 3;
-            templen = p - tempstart;
-            while (*p == ' ' || *p == '\t')
-                p++;
-            if (*p != '=')
+            tempstart = p.ptr;
+            while (isIdTail(p.ptr))
+                p = p[utfStride(p.ptr) .. $];
+            if (isCVariadicArg(p))
+                p = p[3 .. $];
+            templen = p.ptr - tempstart;
+            while (p[0] == ' ' || p[0] == '\t')
+                p = p[1 .. $];
+            if (p[0] != '=')
             {
                 if (namelen)
                     goto Ltext;
                 // continuation of prev macro
                 goto Lskipline;
             }
-            p++;
+            p = p[1 .. $];
             if (namelen)
             {
                 // Output existing param
@@ -261,25 +260,26 @@ private final class ParamSection : Section
                 }
                 buf.writestring(")");
                 namelen = 0;
-                if (p >= pend)
+                if (!p.length)
                     break;
             }
             namestart = tempstart;
             namelen = templen;
-            while (*p == ' ' || *p == '\t')
-                p++;
-            textstart = p;
+            while (p[0] == ' ' || p[0] == '\t')
+                p = p[1 .. $];
+            textstart = p.ptr;
         Ltext:
-            while (*p != '\n')
-                p++;
-            textlen = p - textstart;
-            p++;
+            while (p[0] != '\n')
+                p = p[1 .. $];
+            textlen = p.ptr - textstart;
+            p = p[1 .. $];
         Lcont:
             continue;
         Lskipline:
             // Ignore this line
-            while (*p++ != '\n')
+            while (p[0] != '\n')
             {
+                p = p[1 .. $];
             }
         }
         if (namelen)
