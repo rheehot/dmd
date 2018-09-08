@@ -93,16 +93,21 @@ extern (C++) void writeFile(Loc loc, File* f)
  */
 extern (C++) void ensurePathToNameExists(Loc loc, const(char)* name)
 {
-    const(char)* pt = FileName.path(name);
-    if (*pt)
+    ensurePathToNameExists(loc, name.toDString());
+}
+
+void ensurePathToNameExists(Loc loc, const(char)[] name)
+{
+    auto pt = FileName.path(name);
+    if (pt.length)
     {
         if (!FileName.ensurePathExists(pt))
         {
-            error(loc, "cannot create directory %s", pt);
+            error(loc, "cannot create directory %.*s", cast(int)pt.length, pt.ptr);
             fatal();
         }
     }
-    FileName.free(pt);
+    FileName.free(pt.ptr);
 }
 
 

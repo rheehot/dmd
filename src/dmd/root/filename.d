@@ -781,16 +781,21 @@ nothrow:
      */
     extern (C++) static bool ensurePathExists(const(char)* path)
     {
-        //printf("FileName::ensurePathExists(%s)\n", path ? path : "");
-        if (!path || !(*path))
+        return ensurePathExists(path.toDString());
+    }
+
+    static bool ensurePathExists(const(char)[] path)
+    {
+        //printf("FileName.ensurePathExists(%.*s)\n", cast(int)path.length, path.ptr);
+        if (!path.length)
             return true;
         if (exists(path))
             return true;
 
         // We were provided with a file name
         // We need to call ourselves recursively to ensure parent dir exist
-        const(char)* p = FileName.path(path);
-        if (*p)
+        const(char)[] p = FileName.path(path);
+        if (p.length)
         {
             version (Windows)
             {
@@ -798,26 +803,26 @@ nothrow:
                 const plen = strlen(p);
                 // Note: Windows filename comparison should be case-insensitive,
                 // however p is a subslice of path so we don't need it
-                if (len == plen ||
-                    (len > 2 && path[1] == ':' && path[2 .. len] == p[0 .. plen]))
+                if (path.length == p.length ||
+                    (path.length > 2 && path[1] == ':' && path[2 .. $] == p))
                 {
-                    mem.xfree(cast(void*)p);
+                    mem.xfree(cast(void*)p.ptr);
                     return true;
                 }
             }
             const r = ensurePathExists(p);
-            mem.xfree(cast(void*)p);
+            mem.xfree(cast(void*)p.ptr);
 
             if (!r)
-                return r;
+                return false;
         }
 
         version (Windows)
-            const r = _mkdir(path.toDString);
+            const r = _mkdir(path);
         version (Posix)
         {
             errno = 0;
-            const r = mkdir(path, (7 << 6) | (7 << 3) | 7);
+            const r = path.toCStringThen!((cp) => mkdir(cp.ptr, (7 << 6) | (7 << 3) | 7));
         }
 
         if (r == 0)

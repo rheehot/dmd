@@ -196,7 +196,7 @@ struct Param
     bool hdrStripPlainFunctions = true; // strip the bodies of plain (non-template) functions
 
     bool doJsonGeneration;              // write JSON file
-    const(char)* jsonfilename;          // write JSON file to jsonfilename
+    const(char)[] jsonfilename;          // write JSON file to jsonfilename
     JsonFieldFlags jsonFieldFlags;      // JSON field flags to include
 
     uint debuglevel;                    // debug level

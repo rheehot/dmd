@@ -814,8 +814,8 @@ private void generateJson(Modules* modules)
     json_generate(&buf, modules);
 
     // Write buf to file
-    const(char)* name = global.params.jsonfilename;
-    if (name && name[0] == '-' && name[1] == 0)
+    const name = global.params.jsonfilename;
+    if (name == "-")
     {
         // Write to stdout; assume it succeeds
         size_t n = fwrite(buf.data, 1, buf.offset, stdout);
@@ -825,10 +825,10 @@ private void generateJson(Modules* modules)
     {
         /* The filename generation code here should be harmonized with Module::setOutfile()
          */
-        const(char)* jsonfilename;
-        if (name && *name)
+        const(char)[] jsonfilename;
+        if (name.length)
         {
-            jsonfilename = FileName.defaultExt(name, global.json_ext);
+            jsonfilename = FileName.defaultExt(name, global.json_ext.toDString());
         }
         else
         {
@@ -838,14 +838,12 @@ private void generateJson(Modules* modules)
                 fatal();
             }
             // Generate json file name from first obj name
-            const(char)* n = global.params.objfiles[0];
+            const(char)[] n = global.params.objfiles[0].toDString();
             n = FileName.name(n);
-            //if (!FileName::absolute(name))
-            //    name = FileName::combine(dir, name);
-            jsonfilename = FileName.forceExt(n, global.json_ext);
+            jsonfilename = FileName.forceExt(n, global.json_ext.toDString());
         }
         ensurePathToNameExists(Loc.initial, jsonfilename);
-        auto jsonfile = new File(jsonfilename);
+        auto jsonfile = new File(jsonfilename.ptr);
         jsonfile.setbuffer(buf.data, buf.offset);
         jsonfile._ref = 1;
         writeFile(Loc.initial, jsonfile);
@@ -1804,7 +1802,7 @@ bool parseCommandLine(const ref Strings arguments, const size_t argc, ref Param 
             case 'f':               // https://dlang.org/dmd.html#switch-Xf
                 if (!p[3])
                     goto Lnoarg;
-                params.jsonfilename = p + 3 + (p[3] == '=');
+                params.jsonfilename = (p + 3 + (p[3] == '=')).toDString();
                 break;
             case 'i':
                 if (!p[3])
@@ -2158,7 +2156,7 @@ Modules createModules(ref Strings files, ref Strings libmodules)
             if (FileName.equals(ext, global.json_ext))
             {
                 global.params.doJsonGeneration = true;
-                global.params.jsonfilename = files[i];
+                global.params.jsonfilename = files[i].toDString();
                 continue;
             }
             if (FileName.equals(ext, global.map_ext))
