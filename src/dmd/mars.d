@@ -596,7 +596,7 @@ private int tryMain(size_t argc, const(char)** argv)
             }
             if (FileName.equals(ext, global.map_ext))
             {
-                global.params.mapfile = files[i];
+                global.params.mapfile = files[i].toDString();
                 continue;
             }
             static if (TARGET.Windows)

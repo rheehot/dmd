@@ -194,7 +194,7 @@ struct Param
     const char *deffile;
     const char *resfile;
     const char *exefile;
-    const char *mapfile;
+    DArray<const char> mapfile;
 };
 
 typedef unsigned structalign_t;

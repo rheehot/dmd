@@ -961,7 +961,7 @@ public:
         }
         arrayEnd();
 
-        requiredProperty("mapFile", global.params.mapfile.toDString);
+        requiredProperty("mapFile", global.params.mapfile);
         requiredProperty("resourceFile", global.params.resfile.toDString);
         requiredProperty("defFile", global.params.deffile.toDString);
 

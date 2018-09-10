@@ -227,7 +227,7 @@ struct Param
     const(char)* deffile;
     const(char)* resfile;
     const(char)* exefile;
-    const(char)* mapfile;
+    const(char)[] mapfile;
 }
 
 alias structalign_t = uint;

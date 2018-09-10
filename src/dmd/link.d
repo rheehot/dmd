@@ -542,17 +542,15 @@ public int runLINK()
             }
             if (!global.params.mapfile)
             {
-                const(char)* fn = FileName.forceExt(global.params.exefile, "map");
-                const(char)* path = FileName.path(global.params.exefile);
-                const(char)* p;
-                if (path[0] == '\0')
-                    p = FileName.combine(global.params.objdir, fn);
-                else
-                    p = fn;
-                global.params.mapfile = cast(char*)p;
+                const(char)[] fn = FileName.forceExt(global.params.exefile.toDString(), "map");
+                const(char)[] path = FileName.path(global.params.exefile.toDString());
+                global.params.mapfile = (path[0] == '\0')
+                    ? FileName.combine(global.params.objdir.toDString(), fn)
+                    : fn;
+
             }
             argv.push("-Xlinker");
-            argv.push(global.params.mapfile);
+            argv.push(global.params.mapfile.ptr);
         }
         if (0 && global.params.exefile)
         {
