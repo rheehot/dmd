@@ -185,9 +185,10 @@ nothrow:
     /********************************
      * Return file name without extension.
      *
-     * TODO:
-     * Once slice are used everywhere and `\0` is not assumed,
-     * this can be turned into a simple slicing.
+     * Note:
+     * The slice overload return a non-`'\0'` terminated string,
+     * which is a slice of the input.
+     * The C++ overload (taking a pointer) allocates memory.
      *
      * Params:
      *  str = file name
@@ -195,9 +196,9 @@ nothrow:
      * Returns:
      *  mem.xmalloc'd filename with extension removed.
      */
-    extern (C++) static const(char)* removeExt(const(char)* str)
+    extern (C++) static char* removeExt(const(char)* str)
     {
-        return removeExt(str.toDString).ptr;
+        return removeExt(str.toDString).xarraydup.ptr;
     }
 
     /// Ditto
@@ -205,14 +206,8 @@ nothrow:
     {
         auto e = ext(str);
         if (e.length)
-        {
-            const len = (str.length - e.length) - 1; // -1 for the dot
-            char* n = cast(char*)mem.xmalloc(len + 1);
-            memcpy(n, str.ptr, len);
-            n[len] = 0;
-            return n[0 .. len];
-        }
-        return mem.xstrdup(str.ptr)[0 .. str.length];
+            return str[0 .. $ - e.length - 1];  // -1 for the dot
+        return str;
     }
 
     unittest

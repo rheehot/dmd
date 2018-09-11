@@ -28,7 +28,7 @@ public:
     static const char *toAbsolute(const char *name, const char *base = NULL);
     static const char *ext(const char *);
     const char *ext();
-    static const char *removeExt(const char *str);
+    static char *removeExt(const char *str);
     static const char *name(const char *);
     const char *name();
     static const char *path(const char *);
