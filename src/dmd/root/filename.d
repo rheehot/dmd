@@ -48,7 +48,7 @@ nothrow:
     ///
     extern (D) this(const(char)[] str)
     {
-        this.str = str.xarraydup;
+        this.str = normalize(str);
     }
 
     /// Compare two name according to the platform's rules (case sensitive or not)
@@ -1120,4 +1120,24 @@ else
                 return F(multibyteBuf[0 .. length - 1]);
         });
     }
+}
+/**
+Normalize path by turning forward slashes into backslashes on Windows
+
+Params:
+  src = Source path, using unix-style ('/') path separators
+
+Returns:
+  A newly-allocated, `'\0\` terminated string.
+  On Windows, '/' are additionally turned into backslashes
+*/
+private const(char)[] normalize(const(char)[] src) nothrow
+{
+    char[] result = src.xarraydup;
+    foreach (ref c; result)
+    {
+        if (c == '/')
+            c = '\\';
+    }
+    return result;
 }
