@@ -239,7 +239,7 @@ enum STRUCTALIGN_DEFAULT = (cast(structalign_t)~0);
 
 struct Global
 {
-    const(char)* inifilename;
+    const(char)[] inifilename;
     const(char)* mars_ext = "d";
     const(char)* obj_ext;
     const(char)* lib_ext;

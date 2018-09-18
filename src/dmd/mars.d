@@ -95,6 +95,7 @@ private void usage()
     import dmd.cli : CLIUsage;
     logo();
     auto help = CLIUsage.usage;
+    const inicname = FileName.canonicalName(global.inifilename);
     printf("
 Documentation: https://dlang.org/
 Config file: %s
@@ -108,7 +109,7 @@ Where:
 
 <option>:
   @<cmdfile>       read arguments from cmdfile
-%.*s", FileName.canonicalName(global.inifilename), help.length, &help[0]);
+%.*s", cast(int)inicname.length, inicname.ptr, help.length, &help[0]);
 }
 
 /**
@@ -164,18 +165,19 @@ private int tryMain(size_t argc, const(char)** argv)
     if (global.inifilename)
     {
         // can be empty as in -conf=
-        if (strlen(global.inifilename) && !FileName.exists(global.inifilename))
-            error(Loc.initial, "Config file '%s' does not exist.", global.inifilename);
+        if (global.inifilename.length && !FileName.exists(global.inifilename))
+            error(Loc.initial, "Config file '%s' does not exist.",
+                  cast(int)global.inifilename.length, global.inifilename.ptr);
     }
     else
     {
         version (Windows)
         {
-            global.inifilename = findConfFile(global.params.argv0, "sc.ini").ptr;
+            global.inifilename = findConfFile(global.params.argv0, "sc.ini");
         }
         else version (Posix)
         {
-            global.inifilename = findConfFile(global.params.argv0, "dmd.conf").ptr;
+            global.inifilename = findConfFile(global.params.argv0, "dmd.conf");
         }
         else
         {
@@ -187,7 +189,7 @@ private int tryMain(size_t argc, const(char)** argv)
     inifile.read();
     /* Need path of configuration file, for use in expanding @P macro
      */
-    const(char)* inifilepath = FileName.path(global.inifilename);
+    const inifilepath = FileName.path(global.inifilename);
     Strings sections;
     StringTable environment;
     environment._init(7);
@@ -296,7 +298,8 @@ private int tryMain(size_t argc, const(char)** argv)
     setTarget(global.params);           // set target operating system
     setTargetCPU(global.params);
     if (global.params.is64bit != is64bit)
-        error(Loc.initial, "the architecture must not be changed in the %s section of %s", envsection.ptr, global.inifilename);
+        error(Loc.initial, "the architecture must not be changed in the %s section of %.*s",
+              envsection.ptr, cast(int)global.inifilename.length, global.inifilename.ptr);
 
     // Target uses 64bit pointers.
     global.params.isLP64 = global.params.is64bit;
@@ -1024,7 +1027,7 @@ private const(char)* parse_arch_arg(Strings* args, const(char)* arch)
  * Returns:
  *   The 'path' in -conf=path, which is the path to the config file to use
  */
-private const(char)* parse_conf_arg(Strings* args)
+private const(char)[] parse_conf_arg(Strings* args)
 {
     const(char)* conf = null;
     foreach (const p; *args)
@@ -1037,7 +1040,7 @@ private const(char)* parse_conf_arg(Strings* args)
                 break;
         }
     }
-    return conf;
+    return conf.toDString();
 }
 
 
@@ -1262,9 +1265,10 @@ private void printPredefinedVersions(FILE* stream)
 
 extern(C) void printGlobalConfigs(FILE* stream)
 {
+    const cstr = global.inifilename.length ? global.inifilename : "(none)";
     stream.fprintf("binary    %.*s\n", global.params.argv0.length, global.params.argv0.ptr);
     stream.fprintf("version   %s\n", global._version);
-    stream.fprintf("config    %s\n", global.inifilename ? global.inifilename : "(none)");
+    stream.fprintf("config    %.*s\n", cstr.length, cstr.ptr);
     // Print DFLAGS environment variable
     {
         StringTable environment;

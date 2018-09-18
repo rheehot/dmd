@@ -923,7 +923,7 @@ public:
         objectStart();
         requiredProperty("cwd", getcwd(null, 0).toDString);
         requiredProperty("argv0", global.params.argv0);
-        requiredProperty("config", global.inifilename.toDString);
+        requiredProperty("config", global.inifilename);
         requiredProperty("libName", global.params.libname.toDString);
 
         propertyStart("importPaths");

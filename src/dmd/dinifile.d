@@ -176,7 +176,7 @@ void updateRealEnvironment(StringTable* environment)
  *      buffer = contents of configuration file
  *      sections = section names
  */
-void parseConfFile(StringTable* environment, const(char)* filename, const(char)* path, size_t length, ubyte* buffer, Strings* sections)
+void parseConfFile(StringTable* environment, const(char)[] filename, const(char)[] path, size_t length, ubyte* buffer, Strings* sections)
 {
     /********************
      * Skip spaces.
@@ -238,7 +238,7 @@ void parseConfFile(StringTable* environment, const(char)* filename, const(char)*
                     if (j - k == 3 && Port.memicmp(&line[k + 1], "@P", 2) == 0)
                     {
                         // %@P% is special meaning the path to the .ini file
-                        auto p = path;
+                        auto p = path.ptr;
                         if (!*p)
                             p = ".";
                         buf.writestring(p);
@@ -354,7 +354,7 @@ void parseConfFile(StringTable* environment, const(char)* filename, const(char)*
                 {
                     if (!writeToEnv(environment, strdup(pn)))
                     {
-                        error(Loc(filename, lineNum, 0), "Use `NAME=value` syntax, not `%s`", pn);
+                        error(Loc(filename.ptr, lineNum, 0), "Use `NAME=value` syntax, not `%s`", pn);
                         fatal();
                     }
                     static if (LOG)
