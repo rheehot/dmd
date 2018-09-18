@@ -305,7 +305,7 @@ private final class MacroSection : Section
     override void write(Loc loc, DocComment* dc, Scope* sc, Dsymbols* a, OutBuffer* buf)
     {
         //printf("MacroSection::write()\n");
-        DocComment.parseMacros(dc.pescapetable, dc.pmacrotable, _body.ptr, _body.length);
+        DocComment.parseMacros(dc.pescapetable, dc.pmacrotable, _body);
     }
 }
 
@@ -379,7 +379,7 @@ extern(C++) void gendocfile(Module m)
             mbuf.write(file.buffer, file.len);
         }
     }
-    DocComment.parseMacros(&m.escapetable, &m.macrotable, mbuf.peekSlice().ptr, mbuf.peekSlice().length);
+    DocComment.parseMacros(&m.escapetable, &m.macrotable, mbuf.peekSlice());
     Scope* sc = Scope.createGlobal(m); // create root scope
     DocComment* dc = DocComment.parse(m, m.comment);
     dc.pmacrotable = &m.macrotable;
@@ -1444,10 +1444,10 @@ struct DocComment
      *
      *      name2 = value2
      */
-    static void parseMacros(Escape** pescapetable, Macro** pmacrotable, const(char)* m, size_t mlen)
+    static void parseMacros(Escape** pescapetable, Macro** pmacrotable, const(char)[] m)
     {
-        const(char)* p = m;
-        size_t len = mlen;
+        const(char)* p = m.ptr;
+        size_t len = m.length;
         const(char)* pend = p + len;
         const(char)* tempstart = null;
         size_t templen = 0;
@@ -1514,7 +1514,7 @@ struct DocComment
             L1:
                 //printf("macro '%.*s' = '%.*s'\n", namelen, namestart, textlen, textstart);
                 if (iequals("ESCAPES", namestart[0 .. namelen]))
-                    parseEscapes(pescapetable, textstart, textlen);
+                    parseEscapes(pescapetable, textstart[0 .. textlen]);
                 else
                     Macro.define(pmacrotable, namestart[0 ..namelen], textstart[0 .. textlen]);
                 namelen = 0;
@@ -1551,7 +1551,7 @@ struct DocComment
      * Multiple escapes can be separated
      * by whitespace and/or commas.
      */
-    static void parseEscapes(Escape** pescapetable, const(char)* textstart, size_t textlen)
+    static void parseEscapes(Escape** pescapetable, const(char)[] text)
     {
         Escape* escapetable = *pescapetable;
         if (!escapetable)
@@ -1560,9 +1560,9 @@ struct DocComment
             memset(escapetable, 0, Escape.sizeof);
             *pescapetable = escapetable;
         }
-        //printf("parseEscapes('%.*s') pescapetable = %p\n", textlen, textstart, pescapetable);
-        const(char)* p = textstart;
-        const(char)* pend = p + textlen;
+        //printf("parseEscapes('%.*s') pescapetable = %p\n", cast(int)text.length, text.ptr, pescapetable);
+        const(char)* p = text.ptr;
+        const(char)* pend = p + text.length;
         while (1)
         {
             while (1)
