@@ -227,8 +227,8 @@ class Lexer : ErrorHandler
     Loc prevloc;            // location of token before current
 
     const(char)* end;       // pointer to last element of buffer
-    const(char)* p;         // current character
-    const(char)* line;      // start of current line
+    const(char)[] p;         // current character
+    const(char)[] line;      // start of current line
     Token token;
     bool doDocComment;      // collect doc comment information
     bool anyToken;          // seen at least one token
@@ -255,8 +255,7 @@ class Lexer : ErrorHandler
         //printf("lexer.filename = %s\n", filename);
         token = Token.init;
         this.end = base + endoffset;
-        p = base + begoffset;
-        line = p;
+        this.p = this.line = base[begoffset .. endoffset];
         this.doDocComment = doDocComment;
         this.commentToken = commentToken;
         this.lastDocLine = 0;
@@ -265,19 +264,19 @@ class Lexer : ErrorHandler
          */
         if (p && p[0] == '#' && p[1] == '!')
         {
-            p += 2;
+            p = p[2 .. $];
             while (1)
             {
-                char c = *p++;
-                switch (c)
+                switch (p[0])
                 {
                 case 0:
                 case 0x1A:
-                    p--;
-                    goto case;
+                    break;
                 case '\n':
+                    p = p[1 .. $];
                     break;
                 default:
+                    p = p[1 .. $];
                     continue;
                 }
                 break;
@@ -332,10 +331,10 @@ class Lexer : ErrorHandler
 
         while (1)
         {
-            t.ptr = p;
+            t.ptr = this.p.ptr;
             //printf("p = %p, *p = '%c'\n",p,*p);
             t.loc = loc();
-            switch (*p)
+            switch (p[0])
             {
             case 0:
             case 0x1A:
@@ -346,21 +345,21 @@ class Lexer : ErrorHandler
             case '\t':
             case '\v':
             case '\f':
-                p++;
+                p = p[1 .. $];
                 continue; // skip white space
             case '\r':
-                p++;
-                if (*p != '\n') // if CR stands by itself
+                p = p[1 .. $];
+                if (p[0] != '\n') // if CR stands by itself
                     endOfLine();
                 continue; // skip white space
             case '\n':
-                p++;
+                p = p[1 .. $];
                 endOfLine();
                 continue; // skip white space
             case '0':
                 if (!isZeroSecond(p[1]))        // if numeric literal does not continue
                 {
-                    ++p;
+                    p = p[1 .. $];
                     t.unsvalue = 0;
                     t.value = TOK.int32Literal;
                     return;
@@ -370,8 +369,8 @@ class Lexer : ErrorHandler
             case '1': .. case '9':
                 if (!isDigitSecond(p[1]))       // if numeric literal does not continue
                 {
-                    t.unsvalue = *p - '0';
-                    ++p;
+                    t.unsvalue = p[0] - '0';
+                    p = p[1 .. $];
                     t.value = TOK.int32Literal;
                     return;
                 }
@@ -384,7 +383,7 @@ class Lexer : ErrorHandler
                 {
                     t.unsvalue = p[1];        // simple one character literal
                     t.value = TOK.charLiteral;
-                    p += 3;
+                    p = p[3 .. $];
                 }
                 else
                     t.value = charConstant(t);
@@ -392,7 +391,7 @@ class Lexer : ErrorHandler
             case 'r':
                 if (p[1] != '"')
                     goto case_ident;
-                p++;
+                p = p[1 .. $];
                 goto case '`';
             case '`':
                 wysiwygStringConstant(t);
@@ -400,20 +399,20 @@ class Lexer : ErrorHandler
             case 'x':
                 if (p[1] != '"')
                     goto case_ident;
-                p++;
+                p = p[1 .. $];
                 t.value = hexStringConstant(t);
                 deprecation("Built-in hex string literals are deprecated, use `std.conv.hexString` instead.");
                 return;
             case 'q':
                 if (p[1] == '"')
                 {
-                    p++;
+                    p = p[1 .. $];
                     delimitedStringConstant(t);
                     return;
                 }
                 else if (p[1] == '{')
                 {
-                    p++;
+                    p = p[1 .. $];
                     tokenStringConstant(t);
                     return;
                 }
@@ -478,7 +477,8 @@ class Lexer : ErrorHandler
                 {
                     while (1)
                     {
-                        const c = *++p;
+                        p = p[1 .. $];
+                        const c = p[0];
                         if (isidchar(c))
                             continue;
                         else if (c & 0x80)
@@ -492,7 +492,7 @@ class Lexer : ErrorHandler
                         }
                         break;
                     }
-                    Identifier id = Identifier.idPool(cast(char*)t.ptr, cast(uint)(p - t.ptr));
+                    Identifier id = Identifier.idPool(cast(char*)t.ptr, cast(uint)(p.ptr - t.ptr));
                     t.ident = id;
                     t.value = cast(TOK)id.getValue();
                     anyToken = 1;
@@ -545,46 +545,46 @@ class Lexer : ErrorHandler
                         {
                             t.value = TOK.endOfFile;
                             // Advance scanner to end of file
-                            while (!(*p == 0 || *p == 0x1A))
-                                p++;
+                            while (!(p[0] == 0 || p[0] == 0x1A))
+                                p = p[1 .. $];
                         }
                     }
                     //printf("t.value = %d\n",t.value);
                     return;
                 }
             case '/':
-                p++;
-                switch (*p)
+                p = p[1 .. $];
+                switch (p[0])
                 {
                 case '=':
-                    p++;
+                    p = p[1 .. $];
                     t.value = TOK.divAssign;
                     return;
                 case '*':
-                    p++;
+                    p = p[1 .. $];
                     startLoc = loc();
                     while (1)
                     {
                         while (1)
                         {
-                            const c = *p;
+                            const c = p[0];
                             switch (c)
                             {
                             case '/':
                                 break;
                             case '\n':
                                 endOfLine();
-                                p++;
+                                p = p[1 .. $];
                                 continue;
                             case '\r':
-                                p++;
-                                if (*p != '\n')
+                                p = p[1 .. $];
+                                if (p[0] != '\n')
                                     endOfLine();
                                 continue;
                             case 0:
                             case 0x1A:
                                 error("unterminated /* */ comment");
-                                p = end;
+                                p = p[$ .. $];
                                 t.loc = loc();
                                 t.value = TOK.endOfFile;
                                 return;
@@ -595,13 +595,13 @@ class Lexer : ErrorHandler
                                     if (u == PS || u == LS)
                                         endOfLine();
                                 }
-                                p++;
+                                p = p[1 .. $];
                                 continue;
                             }
                             break;
                         }
-                        p++;
-                        if (p[-2] == '*' && p - 3 != t.ptr)
+                        p = p[1 .. $];
+                        if (p.ptr[-2] == '*' && p.ptr - 3 != t.ptr)
                             break;
                     }
                     if (commentToken)
@@ -610,7 +610,7 @@ class Lexer : ErrorHandler
                         t.value = TOK.comment;
                         return;
                     }
-                    else if (doDocComment && t.ptr[2] == '*' && p - 4 != t.ptr)
+                    else if (doDocComment && t.ptr[2] == '*' && p.ptr - 4 != t.ptr)
                     {
                         // if /** but not /**/
                         getDocComment(t, lastLine == startLoc.linnum, startLoc.linnum - lastDocLine > 1);
@@ -621,20 +621,21 @@ class Lexer : ErrorHandler
                     startLoc = loc();
                     while (1)
                     {
-                        const c = *++p;
+                        p = p[1 .. $];
+                        const c = p[0];
                         switch (c)
                         {
                         case '\n':
                             break;
                         case '\r':
                             if (p[1] == '\n')
-                                p++;
+                                p = p[1 .. $];
                             break;
                         case 0:
                         case 0x1A:
                             if (commentToken)
                             {
-                                p = end;
+                                p = p[$ .. $];
                                 t.loc = startLoc;
                                 t.value = TOK.comment;
                                 return;
@@ -644,7 +645,7 @@ class Lexer : ErrorHandler
                                 getDocComment(t, lastLine == startLoc.linnum, startLoc.linnum - lastDocLine > 1);
                                 lastDocLine = scanloc.linnum;
                             }
-                            p = end;
+                            p = p[$ .. $];
                             t.loc = loc();
                             t.value = TOK.endOfFile;
                             return;
@@ -661,7 +662,7 @@ class Lexer : ErrorHandler
                     }
                     if (commentToken)
                     {
-                        p++;
+                        p = p[1 .. $];
                         endOfLine();
                         t.loc = startLoc;
                         t.value = TOK.comment;
@@ -672,50 +673,50 @@ class Lexer : ErrorHandler
                         getDocComment(t, lastLine == startLoc.linnum, startLoc.linnum - lastDocLine > 1);
                         lastDocLine = scanloc.linnum;
                     }
-                    p++;
+                    p = p[1 .. $];
                     endOfLine();
                     continue;
                 case '+':
                     {
                         int nest;
                         startLoc = loc();
-                        p++;
+                        p = p[1 .. $];
                         nest = 1;
                         while (1)
                         {
-                            char c = *p;
+                            char c = p[0];
                             switch (c)
                             {
                             case '/':
-                                p++;
-                                if (*p == '+')
+                                p = p[1 .. $];
+                                if (p[0] == '+')
                                 {
-                                    p++;
+                                    p = p[1 .. $];
                                     nest++;
                                 }
                                 continue;
                             case '+':
-                                p++;
-                                if (*p == '/')
+                                p = p[1 .. $];
+                                if (p[0] == '/')
                                 {
-                                    p++;
+                                    p = p[1 .. $];
                                     if (--nest == 0)
                                         break;
                                 }
                                 continue;
                             case '\r':
-                                p++;
-                                if (*p != '\n')
+                                p = p[1 .. $];
+                                if (p[0] != '\n')
                                     endOfLine();
                                 continue;
                             case '\n':
                                 endOfLine();
-                                p++;
+                                p = p[1 .. $];
                                 continue;
                             case 0:
                             case 0x1A:
                                 error("unterminated /+ +/ comment");
-                                p = end;
+                                p = p[$ .. $];
                                 t.loc = loc();
                                 t.value = TOK.endOfFile;
                                 return;
@@ -726,7 +727,7 @@ class Lexer : ErrorHandler
                                     if (u == PS || u == LS)
                                         endOfLine();
                                 }
-                                p++;
+                                p = p[1 .. $];
                                 continue;
                             }
                             break;
@@ -737,7 +738,7 @@ class Lexer : ErrorHandler
                             t.value = TOK.comment;
                             return;
                         }
-                        if (doDocComment && t.ptr[2] == '+' && p - 4 != t.ptr)
+                        if (doDocComment && t.ptr[2] == '+' && p.ptr - 4 != t.ptr)
                         {
                             // if /++ but not /++/
                             getDocComment(t, lastLine == startLoc.linnum, startLoc.linnum - lastDocLine > 1);
@@ -751,104 +752,106 @@ class Lexer : ErrorHandler
                 t.value = TOK.div;
                 return;
             case '.':
-                p++;
-                if (isdigit(*p))
+                const c1 = p[1];
+                if (isdigit(c1))
                 {
                     /* Note that we don't allow ._1 and ._ as being
                      * valid floating point numbers.
                      */
-                    p--;
                     t.value = inreal(t);
                 }
-                else if (p[0] == '.')
+                else if (c1 == '.')
                 {
-                    if (p[1] == '.')
+                    if (p[2] == '.')
                     {
-                        p += 2;
+                        p = p[3 .. $];
                         t.value = TOK.dotDotDot;
                     }
                     else
                     {
-                        p++;
+                        p = p[2 .. $];
                         t.value = TOK.slice;
                     }
                 }
                 else
+                {
+                    p = p[1 .. $];
                     t.value = TOK.dot;
+                }
                 return;
             case '&':
-                p++;
-                if (*p == '=')
+                p = p[1 .. $];
+                if (p[0] == '=')
                 {
-                    p++;
+                    p = p[1 .. $];
                     t.value = TOK.andAssign;
                 }
-                else if (*p == '&')
+                else if (p[0] == '&')
                 {
-                    p++;
+                    p = p[1 .. $];
                     t.value = TOK.andAnd;
                 }
                 else
                     t.value = TOK.and;
                 return;
             case '|':
-                p++;
-                if (*p == '=')
+                p = p[1 .. $];
+                if (p[0] == '=')
                 {
-                    p++;
+                    p = p[1 .. $];
                     t.value = TOK.orAssign;
                 }
-                else if (*p == '|')
+                else if (p[0] == '|')
                 {
-                    p++;
+                    p = p[1 .. $];
                     t.value = TOK.orOr;
                 }
                 else
                     t.value = TOK.or;
                 return;
             case '-':
-                p++;
-                if (*p == '=')
+                p = p[1 .. $];
+                if (p[0] == '=')
                 {
-                    p++;
+                    p = p[1 .. $];
                     t.value = TOK.minAssign;
                 }
-                else if (*p == '-')
+                else if (p[0] == '-')
                 {
-                    p++;
+                    p = p[1 .. $];
                     t.value = TOK.minusMinus;
                 }
                 else
                     t.value = TOK.min;
                 return;
             case '+':
-                p++;
-                if (*p == '=')
+                p = p[1 .. $];
+                if (p[0] == '=')
                 {
-                    p++;
+                    p = p[1 .. $];
                     t.value = TOK.addAssign;
                 }
-                else if (*p == '+')
+                else if (p[0] == '+')
                 {
-                    p++;
+                    p = p[1 .. $];
                     t.value = TOK.plusPlus;
                 }
                 else
                     t.value = TOK.add;
                 return;
             case '<':
-                p++;
-                if (*p == '=')
+                p = p[1 .. $];
+                if (p[0] == '=')
                 {
-                    p++;
+                    p = p[1 .. $];
                     t.value = TOK.lessOrEqual; // <=
                 }
-                else if (*p == '<')
+                else if (p[0] == '<')
                 {
-                    p++;
-                    if (*p == '=')
+                    p = p[1 .. $];
+                    if (p[0] == '=')
                     {
-                        p++;
+                        p = p[1 .. $];
                         t.value = TOK.leftShiftAssign; // <<=
                     }
                     else
@@ -858,26 +861,26 @@ class Lexer : ErrorHandler
                     t.value = TOK.lessThan; // <
                 return;
             case '>':
-                p++;
-                if (*p == '=')
+                p = p[1 .. $];
+                if (p[0] == '=')
                 {
-                    p++;
+                    p = p[1 .. $];
                     t.value = TOK.greaterOrEqual; // >=
                 }
-                else if (*p == '>')
+                else if (p[0] == '>')
                 {
-                    p++;
-                    if (*p == '=')
+                    p = p[1 .. $];
+                    if (p[0] == '=')
                     {
-                        p++;
+                        p = p[1 .. $];
                         t.value = TOK.rightShiftAssign; // >>=
                     }
-                    else if (*p == '>')
+                    else if (p[0] == '>')
                     {
-                        p++;
-                        if (*p == '=')
+                        p = p[1 .. $];
+                        if (p[0] == '=')
                         {
-                            p++;
+                            p = p[1 .. $];
                             t.value = TOK.unsignedRightShiftAssign; // >>>=
                         }
                         else
@@ -890,124 +893,124 @@ class Lexer : ErrorHandler
                     t.value = TOK.greaterThan; // >
                 return;
             case '!':
-                p++;
-                if (*p == '=')
+                p = p[1 .. $];
+                if (p[0] == '=')
                 {
-                    p++;
+                    p = p[1 .. $];
                     t.value = TOK.notEqual; // !=
                 }
                 else
                     t.value = TOK.not; // !
                 return;
             case '=':
-                p++;
-                if (*p == '=')
+                p = p[1 .. $];
+                if (p[0] == '=')
                 {
-                    p++;
+                    p = p[1 .. $];
                     t.value = TOK.equal; // ==
                 }
-                else if (*p == '>')
+                else if (p[0] == '>')
                 {
-                    p++;
+                    p = p[1 .. $];
                     t.value = TOK.goesTo; // =>
                 }
                 else
                     t.value = TOK.assign; // =
                 return;
             case '~':
-                p++;
-                if (*p == '=')
+                p = p[1 .. $];
+                if (p[0] == '=')
                 {
-                    p++;
+                    p = p[1 .. $];
                     t.value = TOK.concatenateAssign; // ~=
                 }
                 else
                     t.value = TOK.tilde; // ~
                 return;
             case '^':
-                p++;
-                if (*p == '^')
+                p = p[1 .. $];
+                if (p[0] == '^')
                 {
-                    p++;
-                    if (*p == '=')
+                    p = p[1 .. $];
+                    if (p[0] == '=')
                     {
-                        p++;
+                        p = p[1 .. $];
                         t.value = TOK.powAssign; // ^^=
                     }
                     else
                         t.value = TOK.pow; // ^^
                 }
-                else if (*p == '=')
+                else if (p[0] == '=')
                 {
-                    p++;
+                    p = p[1 .. $];
                     t.value = TOK.xorAssign; // ^=
                 }
                 else
                     t.value = TOK.xor; // ^
                 return;
             case '(':
-                p++;
+                p = p[1 .. $];
                 t.value = TOK.leftParentheses;
                 return;
             case ')':
-                p++;
+                p = p[1 .. $];
                 t.value = TOK.rightParentheses;
                 return;
             case '[':
-                p++;
+                p = p[1 .. $];
                 t.value = TOK.leftBracket;
                 return;
             case ']':
-                p++;
+                p = p[1 .. $];
                 t.value = TOK.rightBracket;
                 return;
             case '{':
-                p++;
+                p = p[1 .. $];
                 t.value = TOK.leftCurly;
                 return;
             case '}':
-                p++;
+                p = p[1 .. $];
                 t.value = TOK.rightCurly;
                 return;
             case '?':
-                p++;
+                p = p[1 .. $];
                 t.value = TOK.question;
                 return;
             case ',':
-                p++;
+                p = p[1 .. $];
                 t.value = TOK.comma;
                 return;
             case ';':
-                p++;
+                p = p[1 .. $];
                 t.value = TOK.semicolon;
                 return;
             case ':':
-                p++;
+                p = p[1 .. $];
                 t.value = TOK.colon;
                 return;
             case '$':
-                p++;
+                p = p[1 .. $];
                 t.value = TOK.dollar;
                 return;
             case '@':
-                p++;
+                p = p[1 .. $];
                 t.value = TOK.at;
                 return;
             case '*':
-                p++;
-                if (*p == '=')
+                p = p[1 .. $];
+                if (p[0] == '=')
                 {
-                    p++;
+                    p = p[1 .. $];
                     t.value = TOK.mulAssign;
                 }
                 else
                     t.value = TOK.mul;
                 return;
             case '%':
-                p++;
-                if (*p == '=')
+                p = p[1 .. $];
+                if (p[0] == '=')
                 {
-                    p++;
+                    p = p[1 .. $];
                     t.value = TOK.modAssign;
                 }
                 else
@@ -1015,7 +1018,7 @@ class Lexer : ErrorHandler
                 return;
             case '#':
                 {
-                    p++;
+                    p = p[1 .. $];
                     Token n;
                     scan(&n);
                     if (n.value == TOK.identifier)
@@ -1040,7 +1043,7 @@ class Lexer : ErrorHandler
                 }
             default:
                 {
-                    dchar c = *p;
+                    dchar c = p[0];
                     if (c & 0x80)
                     {
                         c = decodeUTF();
@@ -1050,7 +1053,7 @@ class Lexer : ErrorHandler
                         if (c == PS || c == LS)
                         {
                             endOfLine();
-                            p++;
+                            p = p[1 .. $];
                             continue;
                         }
                     }
@@ -1058,7 +1061,7 @@ class Lexer : ErrorHandler
                         error("character '%c' is not a valid token", c);
                     else
                         error("character 0x%02x is not a valid token", c);
-                    p++;
+                    p = p[1 .. $];
                     continue;
                 }
             }
@@ -1140,12 +1143,12 @@ class Lexer : ErrorHandler
     Returns:
         the escaped sequence as a single character
     */
-    static dchar escapeSequence(ErrorHandler handler, ref const(char)* sequence)
+    static dchar escapeSequence(ErrorHandler handler, ref const(char)[] sequence)
     {
-        const(char)* p = sequence; // cache sequence reference on stack
+        const(char)[] p = sequence; // cache sequence reference on stack
         scope(exit) sequence = p;
 
-        uint c = *p;
+        uint c = p[0];
         int ndigits;
         switch (c)
         {
@@ -1154,7 +1157,7 @@ class Lexer : ErrorHandler
         case '?':
         case '\\':
         Lconsume:
-            p++;
+            p = p[1 .. $];
             break;
         case 'a':
             c = 7;
@@ -1186,8 +1189,8 @@ class Lexer : ErrorHandler
         case 'x':
             ndigits = 2;
         Lhex:
-            p++;
-            c = *p;
+            p = p[1 .. $];
+            c = p[0];
             if (ishex(cast(char)c))
             {
                 uint v = 0;
@@ -1201,7 +1204,8 @@ class Lexer : ErrorHandler
                     else
                         c -= 'A' - 10;
                     v = v * 16 + c;
-                    c = *++p;
+                    p = p[1 .. $];
+                    c = p[0];
                     if (++n == ndigits)
                         break;
                     if (!ishex(cast(char)c))
@@ -1220,14 +1224,14 @@ class Lexer : ErrorHandler
             else
             {
                 handler.error("undefined escape hex sequence \\%c%c", sequence[0], c);
-                p++;
+                p = p[1 .. $];
             }
             break;
         case '&':
             // named character entity
             for (const idstart = ++p; 1; p++)
             {
-                switch (*p)
+                switch (p[0])
                 {
                 case ';':
                     c = HtmlNamedEntity(idstart, p - idstart);
@@ -1236,10 +1240,10 @@ class Lexer : ErrorHandler
                         handler.error("unnamed character entity &%.*s;", cast(int)(p - idstart), idstart);
                         c = '?';
                     }
-                    p++;
+                    p = p[1 .. $];
                     break;
                 default:
-                    if (isalpha(*p) || (p != idstart && isdigit(*p)))
+                    if (isalpha(p[0]) || (p != idstart && isdigit(p[0])))
                         continue;
                     handler.error("unterminated named entity &%.*s;", cast(int)(p - idstart + 1), idstart);
                     c = '?';
@@ -1271,7 +1275,7 @@ class Lexer : ErrorHandler
             else
             {
                 handler.error("undefined escape sequence \\%c", c);
-                p++;
+                p = p[1 .. $];
             }
             break;
         }
@@ -1290,12 +1294,12 @@ class Lexer : ErrorHandler
         result.value = TOK.string_;
         Loc start = loc();
         auto terminator = p[0];
-        p++;
+        p = p[1 .. $];
         stringbuffer.reset();
         while (1)
         {
             dchar c = p[0];
-            p++;
+            p = p[1 .. $];
             switch (c)
             {
             case '\n':
@@ -1325,7 +1329,7 @@ class Lexer : ErrorHandler
                 {
                     p--;
                     const u = decodeUTF();
-                    p++;
+                    p = p[1 .. $];
                     if (u == PS || u == LS)
                         endOfLine();
                     stringbuffer.writeUTF8(u);
@@ -1346,11 +1350,11 @@ class Lexer : ErrorHandler
         Loc start = loc();
         uint n = 0;
         uint v = ~0; // dead assignment, needed to suppress warning
-        p++;
+        p = p[1 .. $];
         stringbuffer.reset();
         while (1)
         {
-            dchar c = *p++;
+            dchar c = p[0]++;
             switch (c)
             {
             case ' ':
@@ -1359,7 +1363,7 @@ class Lexer : ErrorHandler
             case '\f':
                 continue; // skip white space
             case '\r':
-                if (*p == '\n')
+                if (p[0] == '\n')
                     continue; // ignore '\r' if followed by '\n'
                 // Treat isolated '\r' as if it were a '\n'
                 goto case '\n';
@@ -1393,7 +1397,7 @@ class Lexer : ErrorHandler
                 {
                     p--;
                     const u = decodeUTF();
-                    p++;
+                    p = p[1 .. $];
                     if (u == PS || u == LS)
                         endOfLine();
                     else
@@ -1440,11 +1444,12 @@ class Lexer : ErrorHandler
         Identifier hereid = null;
         uint blankrol = 0;
         uint startline = 0;
-        p++;
+        p = p[1 .. $];
         stringbuffer.reset();
         while (1)
         {
-            dchar c = *p++;
+            dchar c = p[0];
+            p = p[1 .. $];
             //printf("c = '%c'\n", c);
             switch (c)
             {
@@ -1464,7 +1469,7 @@ class Lexer : ErrorHandler
                 }
                 break;
             case '\r':
-                if (*p == '\n')
+                if (p[0] == '\n')
                     continue; // ignore
                 c = '\n'; // treat EndOfLine as \n character
                 goto Lnextline;
@@ -1480,7 +1485,7 @@ class Lexer : ErrorHandler
                 {
                     p--;
                     c = decodeUTF();
-                    p++;
+                    p = p[1 .. $];
                     if (c == PS || c == LS)
                         goto Lnextline;
                 }
@@ -1567,8 +1572,8 @@ class Lexer : ErrorHandler
             }
         }
     Ldone:
-        if (*p == '"')
-            p++;
+        if (p[0] == '"')
+            p = p[1 .. $];
         else if (hereid)
             error("delimited string must end in %s\"", hereid.toChars());
         else
@@ -1635,15 +1640,15 @@ class Lexer : ErrorHandler
         t.value = TOK.string_;
 
         const start = loc();
-        p++;
+        p = p[1 .. $];
         stringbuffer.reset();
         while (1)
         {
-            dchar c = *p++;
+            dchar c = p[0]++;
             switch (c)
             {
             case '\\':
-                switch (*p)
+                switch (p[0])
                 {
                 case 'u':
                 case 'U':
@@ -1660,7 +1665,7 @@ class Lexer : ErrorHandler
                 endOfLine();
                 break;
             case '\r':
-                if (*p == '\n')
+                if (p[0] == '\n')
                     continue; // ignore
                 c = '\n'; // treat EndOfLine as \n character
                 endOfLine();
@@ -1686,7 +1691,7 @@ class Lexer : ErrorHandler
                         c = '\n';
                         endOfLine();
                     }
-                    p++;
+                    p = p[1 .. $];
                     stringbuffer.writeUTF8(c);
                     continue;
                 }
@@ -1702,12 +1707,12 @@ class Lexer : ErrorHandler
     {
         TOK tk = TOK.charLiteral;
         //printf("Lexer::charConstant\n");
-        p++;
-        dchar c = *p++;
+        p = p[1 .. $];
+        dchar c = p[0]++;
         switch (c)
         {
         case '\\':
-            switch (*p)
+            switch (p[0])
             {
             case 'u':
                 t.unsvalue = escapeSequence();
@@ -1743,7 +1748,7 @@ class Lexer : ErrorHandler
             {
                 p--;
                 c = decodeUTF();
-                p++;
+                p = p[1 .. $];
                 if (c == LS || c == PS)
                     goto L1;
                 if (c < 0xD800 || (c >= 0xE000 && c < 0xFFFE))
@@ -1754,13 +1759,13 @@ class Lexer : ErrorHandler
             t.unsvalue = c;
             break;
         }
-        if (*p != '\'')
+        if (p[0] != '\'')
         {
             error("unterminated character constant");
             t.unsvalue = '?';
             return tk;
         }
-        p++;
+        p = p[1 .. $];
         return tk;
     }
 
@@ -1769,13 +1774,13 @@ class Lexer : ErrorHandler
      */
     final void stringPostfix(Token* t)
     {
-        switch (*p)
+        switch (p[0])
         {
         case 'c':
         case 'w':
         case 'd':
-            t.postfix = *p;
-            p++;
+            t.postfix = p[0];
+            p = p[1 .. $];
             break;
         default:
             t.postfix = 0;
@@ -1803,11 +1808,11 @@ class Lexer : ErrorHandler
         bool overflow = false;
         bool anyBinaryDigitsUS = false;
         bool anyHexDigitsNoSingleUS = false;
-        dchar c = *p;
+        dchar c = p[0];
         if (c == '0')
         {
             ++p;
-            c = *p;
+            c = p[0];
             switch (c)
             {
             case '0':
@@ -1856,7 +1861,7 @@ class Lexer : ErrorHandler
         }
         while (1)
         {
-            c = *p;
+            c = p[0];
             switch (c)
             {
             case '0':
@@ -1965,7 +1970,7 @@ class Lexer : ErrorHandler
         while (1)
         {
             FLAGS f;
-            switch (*p)
+            switch (p[0])
             {
             case 'U':
             case 'u':
@@ -1978,7 +1983,7 @@ class Lexer : ErrorHandler
             case 'L':
                 f = FLAGS.long_;
             L1:
-                p++;
+                p = p[1 .. $];
                 if ((flags & f) && !err)
                 {
                     error("unrecognized token");
@@ -2086,21 +2091,21 @@ class Lexer : ErrorHandler
         //printf("Lexer::inreal()\n");
         debug
         {
-            assert(*p == '.' || isdigit(*p));
+            assert(p[0] == '.' || isdigit(p[0]));
         }
         bool isWellformedString = true;
         stringbuffer.reset();
         auto pstart = p;
         bool hex = false;
-        dchar c = *p++;
+        dchar c = p[0]++;
         // Leading '0x'
         if (c == '0')
         {
-            c = *p++;
+            c = p[0]++;
             if (c == 'x' || c == 'X')
             {
                 hex = true;
-                c = *p++;
+                c = p[0]++;
             }
         }
         // Digits to left of '.'
@@ -2108,12 +2113,12 @@ class Lexer : ErrorHandler
         {
             if (c == '.')
             {
-                c = *p++;
+                c = p[0]++;
                 break;
             }
             if (isdigit(c) || (hex && isxdigit(c)) || c == '_')
             {
-                c = *p++;
+                c = p[0]++;
                 continue;
             }
             break;
@@ -2123,17 +2128,17 @@ class Lexer : ErrorHandler
         {
             if (isdigit(c) || (hex && isxdigit(c)) || c == '_')
             {
-                c = *p++;
+                c = p[0]++;
                 continue;
             }
             break;
         }
         if (c == 'e' || c == 'E' || (hex && (c == 'p' || c == 'P')))
         {
-            c = *p++;
+            c = p[0]++;
             if (c == '-' || c == '+')
             {
-                c = *p++;
+                c = p[0]++;
             }
             bool anyexp = false;
             while (1)
@@ -2141,12 +2146,12 @@ class Lexer : ErrorHandler
                 if (isdigit(c))
                 {
                     anyexp = true;
-                    c = *p++;
+                    c = p[0]++;
                     continue;
                 }
                 if (c == '_')
                 {
-                    c = *p++;
+                    c = p[0]++;
                     continue;
                 }
                 if (!anyexp)
@@ -2174,14 +2179,14 @@ class Lexer : ErrorHandler
         TOK result;
         bool isOutOfRange = false;
         t.floatvalue = (isWellformedString ? CTFloat.parse(sbufptr, &isOutOfRange) : CTFloat.zero);
-        switch (*p)
+        switch (p[0])
         {
         case 'F':
         case 'f':
             if (isWellformedString && !isOutOfRange)
                 isOutOfRange = Port.isFloat32LiteralOutOfRange(sbufptr);
             result = TOK.float32Literal;
-            p++;
+            p = p[1 .. $];
             break;
         default:
             if (isWellformedString && !isOutOfRange)
@@ -2193,14 +2198,14 @@ class Lexer : ErrorHandler
             goto case 'L';
         case 'L':
             result = TOK.float80Literal;
-            p++;
+            p = p[1 .. $];
             break;
         }
-        if (*p == 'i' || *p == 'I')
+        if (p[0] == 'i' || p[0] == 'I')
         {
-            if (*p == 'I')
+            if (p[0] == 'I')
                 error("use 'i' suffix instead of 'I'");
-            p++;
+            p = p[1 .. $];
             switch (result)
             {
             case TOK.float32Literal:
@@ -2242,7 +2247,7 @@ class Lexer : ErrorHandler
 
     final Loc loc()
     {
-        scanloc.charnum = cast(uint)(1 + p - line);
+        scanloc.charnum = cast(uint)(1 + p - line.ptr);
         return scanloc;
     }
 
@@ -2301,7 +2306,7 @@ class Lexer : ErrorHandler
             goto Lerr;
         while (1)
         {
-            switch (*p)
+            switch (p[0])
             {
             case 0:
             case 0x1A:
@@ -2312,8 +2317,8 @@ class Lexer : ErrorHandler
                     this.scanloc.filename = filespec;
                 return;
             case '\r':
-                p++;
-                if (*p != '\n')
+                p = p[1 .. $];
+                if (p[0] != '\n')
                 {
                     p--;
                     goto Lnewline;
@@ -2323,7 +2328,7 @@ class Lexer : ErrorHandler
             case '\t':
             case '\v':
             case '\f':
-                p++;
+                p = p[1 .. $];
                 continue; // skip white space
             case '_':
                 if (memcmp(p, "__FILE__".ptr, 8) == 0)
@@ -2337,11 +2342,11 @@ class Lexer : ErrorHandler
                 if (filespec)
                     goto Lerr;
                 stringbuffer.reset();
-                p++;
+                p = p[1 .. $];
                 while (1)
                 {
                     uint c;
-                    c = *p;
+                    c = p[0];
                     switch (c)
                     {
                     case '\n':
@@ -2352,7 +2357,7 @@ class Lexer : ErrorHandler
                     case '"':
                         stringbuffer.writeByte(0);
                         filespec = mem.xstrdup(cast(const(char)*)stringbuffer.data);
-                        p++;
+                        p = p[1 .. $];
                         break;
                     default:
                         if (c & 0x80)
@@ -2362,14 +2367,14 @@ class Lexer : ErrorHandler
                                 goto Lerr;
                         }
                         stringbuffer.writeByte(c);
-                        p++;
+                        p = p[1 .. $];
                         continue;
                     }
                     break;
                 }
                 continue;
             default:
-                if (*p & 0x80)
+                if (p[0] & 0x80)
                 {
                     uint u = decodeUTF();
                     if (u == PS || u == LS)
