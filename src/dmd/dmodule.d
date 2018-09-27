@@ -588,45 +588,6 @@ extern (C++) final class Module : Package
         docfile = setOutfile(global.params.docname, global.params.docdir, arg, global.doc_ext);
     }
 
-    // read file, returns 'true' if succeed, 'false' otherwise.
-    bool read(Loc loc)
-    {
-        //printf("Module::read('%s') file '%s'\n", toChars(), srcfile.toChars());
-        if (!srcfile.read())
-            return true;
-
-        if (FileName.equals(srcfile.toString(), "object.d"))
-        {
-            .error(loc, "cannot find source code for runtime library file 'object.d'");
-            errorSupplemental(loc, "dmd might not be correctly installed. Run 'dmd -man' for installation instructions.");
-            const dmdConfFile = FileName.canonicalName(global.inifilename);
-            errorSupplemental(loc, "config file: %s", dmdConfFile ? dmdConfFile : "not found".ptr);
-        }
-        else
-        {
-            // if module is not named 'package' but we're trying to read 'package.d', we're looking for a package module
-            bool isPackageMod = (strcmp(toChars(), "package") != 0) && (strcmp(srcfile.name.name(), "package.d") == 0 || (strcmp(srcfile.name.name(), "package.di") == 0));
-            if (isPackageMod)
-                .error(loc, "importing package '%s' requires a 'package.d' file which cannot be found in '%s'", toChars(), srcfile.toChars());
-            else
-                error(loc, "is in file '%s' which cannot be read", srcfile.toChars());
-        }
-        if (!global.gag)
-        {
-            /* Print path
-             */
-            if (global.path)
-            {
-                foreach (i, p; *global.path)
-                    fprintf(stderr, "import path[%llu] = %s\n", cast(ulong)i, p);
-            }
-            else
-                fprintf(stderr, "Specify path to file '%s' with -I switch\n", srcfile.toChars());
-            fatal();
-        }
-        return false;
-    }
-
     // syntactic parse
     Module parse()
     {
@@ -1327,4 +1288,49 @@ struct ModuleDeclaration
     {
         return this.toChars().toDString;
     }
+}
+
+/**
+ * Read `srcfile`
+ *
+ * Return:
+ * `true` if the read succeeded
+ */
+// read file, returns 'true' if succeed, 'false' otherwise.
+package bool read(ref Module m, Loc loc)
+{
+    //printf("Module::read('%s') file '%s'\n", toChars(), srcfile.toChars());
+    if (!m.srcfile.read())
+        return true;
+
+    if (FileName.equals(m.srcfile.toString(), "object.d"))
+    {
+        .error(loc, "cannot find source code for runtime library file 'object.d'");
+        errorSupplemental(loc, "dmd might not be correctly installed. Run 'dmd -man' for installation instructions.");
+        const dmdConfFile = FileName.canonicalName(global.inifilename);
+        errorSupplemental(loc, "config file: %s", dmdConfFile ? dmdConfFile : "not found".ptr);
+    }
+    else
+    {
+        // if module is not named 'package' but we're trying to read 'package.d', we're looking for a package module
+        bool isPackageMod = (strcmp(m.toChars(), "package") != 0) && (strcmp(m.srcfile.name.name(), "package.d") == 0 || (strcmp(m.srcfile.name.name(), "package.di") == 0));
+        if (isPackageMod)
+            .error(loc, "importing package '%s' requires a 'package.d' file which cannot be found in '%s'", m.toChars(), m.srcfile.toChars());
+        else
+            error(loc, "is in file '%s' which cannot be read", m.srcfile.toChars());
+    }
+    if (!global.gag)
+    {
+        /* Print path
+         */
+        if (global.path)
+        {
+            foreach (i, p; *global.path)
+                fprintf(stderr, "import path[%llu] = %s\n", cast(ulong)i, p);
+        }
+        else
+            fprintf(stderr, "Specify path to file '%s' with -I switch\n", m.srcfile.toChars());
+        fatal();
+    }
+    return false;
 }

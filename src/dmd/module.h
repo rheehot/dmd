@@ -111,7 +111,6 @@ public:
     const char *kind() const;
     File *setOutfile(const char *name, const char *dir, const char *arg, const char *ext);
     void setDocfile();
-    bool read(Loc loc); // read file, returns 'true' if succeed, 'false' otherwise.
     Module *parse();    // syntactic parse
     void importAll(Scope *sc);
     int needModuleInfo();
@@ -163,3 +162,6 @@ struct ModuleDeclaration
 
     const char *toChars() const;
 };
+
+// read file, returns 'true' if succeed, 'false' otherwise.
+bool read(Module& m, Loc loc);
