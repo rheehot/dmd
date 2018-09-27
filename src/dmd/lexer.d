@@ -226,7 +226,6 @@ class Lexer : ErrorHandler
     Loc scanloc;            // for error messages
     Loc prevloc;            // location of token before current
 
-    const(char)* base;      // pointer to start of buffer
     const(char)* end;       // pointer to last element of buffer
     const(char)* p;         // current character
     const(char)* line;      // start of current line
@@ -255,7 +254,6 @@ class Lexer : ErrorHandler
         //printf("Lexer::Lexer(%p,%d)\n",base,length);
         //printf("lexer.filename = %s\n", filename);
         token = Token.init;
-        this.base = base;
         this.end = base + endoffset;
         p = base + begoffset;
         line = p;
