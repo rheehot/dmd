@@ -172,11 +172,10 @@ void updateRealEnvironment(StringTable* environment)
  *      environment = our own cache of the program environment
  *      filename = name of the file being parsed
  *      path = what @P will expand to
- *      length = length of the configuration file buffer
  *      buffer = contents of configuration file
  *      sections = section names
  */
-void parseConfFile(StringTable* environment, const(char)[] filename, const(char)[] path, size_t length, ubyte* buffer, Strings* sections)
+void parseConfFile(StringTable* environment, const(char)[] filename, const(char)[] path, ubyte* buffer, Strings* sections)
 {
     /********************
      * Skip spaces.
@@ -193,11 +192,11 @@ void parseConfFile(StringTable* environment, const(char)[] filename, const(char)
     OutBuffer buf;
     bool eof = false;
     int lineNum = 0;
-    for (size_t i = 0; i < length && !eof; i++)
+    for (size_t i = 0; i < path.length && !eof; i++)
     {
     Lstart:
         size_t linestart = i;
-        for (; i < length; i++)
+        for (; i < path.length; i++)
         {
             switch (buffer[i])
             {
@@ -238,10 +237,9 @@ void parseConfFile(StringTable* environment, const(char)[] filename, const(char)
                     if (j - k == 3 && Port.memicmp(&line[k + 1], "@P", 2) == 0)
                     {
                         // %@P% is special meaning the path to the .ini file
-                        auto p = path.ptr;
-                        if (!*p)
-                            p = ".";
-                        buf.writestring(p);
+                        if (!path.ptr[0]) // Bypass bounds checking
+                            path = ".";
+                        buf.writestring(path);
                     }
                     else
                     {
