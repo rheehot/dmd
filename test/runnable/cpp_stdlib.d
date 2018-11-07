@@ -32,6 +32,12 @@ T** identityPP (T) (T** v);
 vector!T* getVector (T) (size_t length, const T* ptr);
 array!(T, N)* getArray(T, size_t N) (const T* ptr);
 
+extern(C++, `ns`)
+{
+    struct xvector(T);
+    void push_back(T, VectorT)(VectorT* this_, ref T value);
+}
+
 void main ()
 {
     int i = 42;
@@ -54,6 +60,10 @@ void main ()
     auto af = getArray!(float, 4)([42.0f, 21.0f, 14.0f, 1957.0f].ptr);
     assert(ai !is null);
     assert(af !is null);
+
+    xvector!int* xvi;
+    xvi.push_back(i);
+    vi.push_back(i);
 
     printf("Success\n");
 }

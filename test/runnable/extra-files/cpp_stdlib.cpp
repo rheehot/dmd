@@ -30,6 +30,24 @@ std::array<T, N>* getArray(const T* ptr)
     return ret;
 }
 
+namespace ns
+{
+    template<typename T>
+    struct xvector : std::vector {
+        using vector = std::vector<T>;
+        using vector::vector;
+    }
+
+    template<typename T, typename VectorT>
+    void push_back(VectorT* this_, T& value)
+    {
+        //this_->push_back(value);
+    }
+
+    void push_back<int, std::vector<int>>(std::vector<int>* this_, int& value);
+    void push_back<int, xvector<int>>(xvector<int>* this_, int& value);
+}
+
 // This function should never be called
 void instantiate ()
 {
