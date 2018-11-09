@@ -62,8 +62,11 @@ void main ()
     assert(af !is null);
 
     xvector!int* xvi;
-    xvi.push_back(i);
-    vi.push_back(i);
+    push_back(xvi, i);
+    push_back(vi, i);
+
+    pragma(msg, push_back!(int, typeof(*xvi)).mangleof);
+    pragma(msg, push_back!(int, typeof(*vi)).mangleof);
 
     printf("Success\n");
 }
