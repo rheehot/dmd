@@ -46,20 +46,20 @@ void main ()
     int* pi = &i;
     float* pf = &f;
 
-    assert(42 == identity(i));
-    assert(21.0f == identity(f));
-    assert(&pi == identityPP(&pi));
-    assert(&pf == identityPP(&pf));
+    // assert(42 == identity(i));
+    // assert(21.0f == identity(f));
+    // assert(&pi == identityPP(&pi));
+    // assert(&pf == identityPP(&pf));
 
     auto vi = getVector(1, &i);
-    auto vf = getVector(3, [f, f, f].ptr);
-    assert(vi !is null);
-    assert(vf !is null);
+    // auto vf = getVector(3, [f, f, f].ptr);
+    // assert(vi !is null);
+    // assert(vf !is null);
 
-    auto ai = getArray!(int, 4)([2012, 10, 11, 42].ptr);
-    auto af = getArray!(float, 4)([42.0f, 21.0f, 14.0f, 1957.0f].ptr);
-    assert(ai !is null);
-    assert(af !is null);
+    // auto ai = getArray!(int, 4)([2012, 10, 11, 42].ptr);
+    // auto af = getArray!(float, 4)([42.0f, 21.0f, 14.0f, 1957.0f].ptr);
+    // assert(ai !is null);
+    // assert(af !is null);
 
     xvector!int* xvi;
     push_back(xvi, i);

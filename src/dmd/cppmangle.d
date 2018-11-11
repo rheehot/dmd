@@ -266,14 +266,18 @@ private final class CppMangleVisitor : Visitor
      */
     int find(RootObject p)
     {
-        //printf("find %p %d %s\n", p, p.dyncast(), p ? p.toChars() : null);
+        printf("find %p %d %s\n", p, p.dyncast(), p ? p.toChars() : null);
+        // try { throw new Exception("Stack trace"); }
+        // catch (Exception e) { import std.stdio; writeln(p ? p.toString() : "null", " ==> ", e); }
         scope v = new ComponentVisitor(p);
         foreach (i, component; components)
         {
             if (component)
                 component.visitObject(v);
-            if (v.result)
+            if (v.result) {
+                printf("Found as %d\n", i);
                 return cast(int)i;
+            }
         }
         return -1;
     }
@@ -283,7 +287,7 @@ private final class CppMangleVisitor : Visitor
      */
     void append(RootObject p)
     {
-        //printf("append %p %d %s\n", p, p.dyncast(), p ? p.toChars() : "null");
+        printf("append %p %d %s\n", p, p.dyncast(), p ? p.toChars() : "null");
         components.push(p);
     }
 
@@ -343,6 +347,7 @@ private final class CppMangleVisitor : Visitor
         {
             Type t = isType(o);
             assert(t);
+            printf("ti=%s, t=%s\n", ti.toChars(), t.toChars());
             t.accept(this);
         }
         else if (TemplateValueParameter tv = tp.isTemplateValueParameter())
@@ -1484,6 +1489,7 @@ extern(C++):
      */
     override void visit(TypeIdentifier t)
     {
+        printf("TypeIdentifier: %s\n", t.toChars());
         auto decl = cast(TemplateDeclaration)this.context.ti.tempdecl;
         assert(decl.parameters !is null);
         // If not found, default to the post-semantic type
@@ -1602,6 +1608,7 @@ extern(C++):
     private bool writeTemplateSubstitution(const ref Identifier ident,
         TemplateParameters* params, Type type)
     {
+        printf("Substittute: %s\n", ident.toChars());
         foreach (idx, param; *params)
         {
             if (param.ident == ident)
