@@ -1056,6 +1056,8 @@ private final class CppMangleVisitor : Visitor
         else
             p = "";
         .error(loc, "Internal Compiler Error: %stype `%s` can not be mapped to C++\n", p, t.toChars());
+        if (this.context.ti !is null)
+            this.context.ti.printInstantiationTrace();
         fatal(); //Fatal, because this error should be handled in frontend
     }
 
