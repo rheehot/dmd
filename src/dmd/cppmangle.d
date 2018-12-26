@@ -475,11 +475,11 @@ private final class CppMangleVisitor : Visitor
              * <template-arg> ::= <type>               # type or template
              *                ::= X <expression> E     # expression
              *                ::= <expr-primary>       # simple expressions
-             *                ::= I <template-arg>* E  # argument pack
+             *                ::= J <template-arg>* E  # argument pack
              */
             if (TemplateTupleParameter tt = tp.isTemplateTupleParameter())
             {
-                buf.writeByte('I');     // argument pack
+                buf.writeByte('J');     // argument pack
 
                 // mangle the rest of the arguments as types
                 foreach (j; i .. (*ti.tiargs).dim)
@@ -1056,6 +1056,46 @@ private final class CppMangleVisitor : Visitor
 
         int paramsCppMangleDg(size_t n, Parameter fparam)
         {
+            auto prev = this.context.push({
+                    auto tf = cast(TypeFunction)this.context.res.asFuncDecl().type;
+                    return (*tf.parameterList.parameters)[n].type;
+                }());
+            scope (exit) this.context.pop(prev);
+
+            /**
+               Special case for parameter type tuple
+
+               AFAIK, we can only have argument packs as parameter to
+               a templated function which takes variadic template args.
+               However, const/ref/ptr can be applied to it.
+
+               In C++:
+               template<typename ...Args>
+               void func(const Args&... args)
+
+               In D:
+               void func(T...)(const ref Args args)
+
+               The parameter part needs to be mangled as `DpRKT_`.
+               If we go through `cppParameterType`, it will call `toReference`
+               and we'll have to look ahead to see if its a TypeTuple,
+               and it makes handling the `const` problematic as well.
+            */
+            if (this.context.res && this.context.res.asType().isTypeTuple())
+            {
+                if (auto ti = fparam.type.isTypeIdentifier())
+                {
+                    buf.writestring("Dp");
+                    if (fparam.storageClass & (STC.ref_ | STC.out_))
+                        buf.writeByte('R');
+                    if (fparam.storageClass & STC.const_)
+                        buf.writeByte('K');
+                    // We already know the type, bypass accept
+                    this.visit(ti);
+                    ++numparams;
+                    return 0;
+                }
+            }
             Type t = target.cppParameterType(fparam);
             if (t.ty == Tsarray)
             {
@@ -1064,11 +1104,6 @@ private final class CppMangleVisitor : Visitor
                     t.toChars());
                 fatal();
             }
-            auto prev = this.context.push({
-                    auto tf = cast(TypeFunction)this.context.res.asFuncDecl().type;
-                    return (*tf.parameterList.parameters)[n].type;
-                }());
-            scope (exit) this.context.pop(prev);
             headOfType(t);
             ++numparams;
             return 0;

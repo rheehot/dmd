@@ -78,3 +78,41 @@ namespace ns1
 // fn0            passthrough_fn0   (fn0 value) { return value; }
 // typedef int (*fn1)(int);
 // fn1            passthrough_fn1   (fn1 value) { return value; }
+
+// https://issues.dlang.org/show_bug.cgi?id=19515
+template<typename A1>
+int accumulator19515(const A1& a1)
+{
+    return a1;
+}
+template<typename A1, typename ...Args>
+int accumulator19515(const A1& a1, const Args&... args)
+{
+    return a1 + accumulator19515(args...);
+}
+template<typename ...Args>
+int function19515(const Args&... args)
+{
+    return accumulator19515(args...);
+}
+template<typename ...Args>
+struct Struct19515
+{
+    int func(const Args&... args)
+    {
+        return accumulator19515(args...);
+    }
+};
+
+namespace ns19515 {
+    template<typename T>
+    struct opaque_vec { T* ptr; };
+
+    template<typename ...Args>
+    int function19515_2(const Args&... args) { return 24041992; }
+};
+
+// Explicit instantiation for the D side
+template int function19515(const int&, const int&, const int&);
+template class Struct19515<int, int, int>;
+template int ns19515::function19515_2(const ns19515::opaque_vec<unsigned char>&);

@@ -1,4 +1,5 @@
 // EXTRA_CPP_SOURCES: cpp_abi_tests.cpp
+// CXXFLAGS: -std=c++11
 
 extern(C++) {
 
@@ -158,6 +159,24 @@ extern(C++, `ns1`)
     int constFunction4(const(char*), const(char***));
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=19515
+extern(C++) int function19515(T...)(const ref T args);
+extern(C++) struct Struct19515 (T...) { int func(const ref T args); }
+extern(C++, `ns19515`)
+{
+    struct opaque_vec(T) { T* ptr; }
+    int function19515_2(T...)(const ref T args);
+}
+void test19515()
+{
+    int a1 = 10, a2 = 11, a3 = 21;
+    assert(42 == function19515(a1, a2, a3));
+    Struct19515!(int, int, int) inst;
+    assert(42 == inst.func(a3, a1, a2));
+    opaque_vec!(ubyte) inst2;
+    assert(24041992 == function19515_2(inst2));
+}
+
 void main()
 {
     foreach(bool val; values!bool())     check(val);
@@ -180,4 +199,6 @@ void main()
     assert(constFunction2(null, null) == 2);
     assert(constFunction3(null, null) == 3);
     assert(constFunction4(null, null) == 42);
+
+    test19515();
 }
