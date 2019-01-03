@@ -902,6 +902,11 @@ private final class CppMangleVisitor : Visitor
                                  TemplateDeclaration ftd, TemplateInstance ti)
     {
         Dsymbol p = getQualifier(ti);
+
+        // It's a nested function (e.g. a member of an aggregate/namespace)
+        if (p)
+            this.mangleNestedFuncPrefix(tf, p);
+
         // Check if this function is *not* nested
         if (!p || tf.linkage != LINK.cpp)
         {
@@ -914,9 +919,6 @@ private final class CppMangleVisitor : Visitor
             this.mangleFunctionParameters(preSemantic.parameterList.parameters, tf.parameterList.varargs);
             return;
         }
-
-        // It's a nested function (e.g. a member of an aggregate)
-        this.mangleNestedFuncPrefix(tf, p);
 
         if (d.isCtorDeclaration())
         {
