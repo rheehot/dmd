@@ -783,16 +783,16 @@ extern(C++, N13337.M13337)
 /****************************************/
 // https://issues.dlang.org/show_bug.cgi?id=14195
 
-struct Delegate1(T) {}
-struct Delegate2(T1, T2) {}
-
-template Signature(T)
-{
-    alias Signature = typeof(*(T.init));
-}
-
 extern(C++)
 {
+    struct Delegate1(T) {}
+    struct Delegate2(T1, T2) {}
+
+    template Signature(T)
+    {
+        alias Signature = typeof(*(T.init));
+    }
+
     alias del1_t = Delegate1!(Signature!(void function()));
     alias del2_t = Delegate2!(Signature!(int function(float, double)), Signature!(int function(float, double)));
     void test14195a(del1_t);
