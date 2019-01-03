@@ -534,14 +534,16 @@ private final class CppMangleVisitor : Visitor
         return s;
     }
 
-    /********
-     * Get qualifier for `s`, meaning the symbol
-     * that s is in the symbol table of.
-     * The module does not count as a qualifier, because C++
-     * does not have modules.
+    /**
+     * Get qualifier for `s`
+     *
+     * The qualifier is the symbol that `s` is in the symbol table of.
+     * The module does not count as a qualifier, because C++ have those.
+     *
      * Params:
      *  s = symbol that may have a qualifier
      *      s is rewritten to be TemplateInstance if s is one
+     *
      * Returns:
      *  qualifier, null if none
      */
@@ -856,8 +858,8 @@ private final class CppMangleVisitor : Visitor
         }
         else
         {
-            Dsymbol p = d.toParent3();
-            if (p && !p.isModule() && tf.linkage == LINK.cpp)
+            Dsymbol p = getQualifier(d);
+            if (p && tf.linkage == LINK.cpp)
             {
                 this.mangleNestedFuncPrefix(tf, p);
 
@@ -899,9 +901,9 @@ private final class CppMangleVisitor : Visitor
     void mangleTemplatedFunction(FuncDeclaration d, TypeFunction tf,
                                  TemplateDeclaration ftd, TemplateInstance ti)
     {
-        Dsymbol p = ti.toParent3();
+        Dsymbol p = getQualifier(ti);
         // Check if this function is *not* nested
-        if (!p || p.isModule() || tf.linkage != LINK.cpp)
+        if (!p || tf.linkage != LINK.cpp)
         {
             this.context.ti = ti;
             this.context.fd = d;
