@@ -23,10 +23,6 @@ struct S18784
     this(int);
 }
 
-extern(C++, std)
-{
-    struct test19248_ {int a = 42;}
-}
 extern(C++, `std`)
 {
     struct test19248 {int a = 34;}
@@ -49,7 +45,6 @@ float  passthrough(float  value);
 double passthrough(double value);
 S      passthrough(S      value);
 test19248 passthrough(const(test19248) value);
-std.test19248_ passthrough(const(std.test19248_) value);
 
 bool   passthrough_ptr(bool   *value);
 byte   passthrough_ptr(byte   *value);
@@ -68,7 +63,6 @@ float  passthrough_ptr(float  *value);
 double passthrough_ptr(double *value);
 S      passthrough_ptr(S      *value);
 test19248 passthrough_ptr(const(test19248)* value);
-std.test19248_ passthrough_ptr(const(std.test19248_)* value);
 
 bool   passthrough_ref(ref bool   value);
 byte   passthrough_ref(ref byte   value);
@@ -87,7 +81,6 @@ float  passthrough_ref(ref float  value);
 double passthrough_ref(ref double value);
 S      passthrough_ref(ref S      value);
 test19248 passthrough_ref(ref const(test19248) value);
-std.test19248_ passthrough_ref(ref const(std.test19248_) value);
 }
 
 template IsSigned(T)
@@ -229,7 +222,6 @@ else
     foreach(double val; values!double()) check(val);
     check(S());
     check(test19248());
-    check(std.test19248_());
 
     assert(constFunction1(null, null) == 1);
     assert(constFunction2(null, null) == 2);
