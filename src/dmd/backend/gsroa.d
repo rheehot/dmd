@@ -372,7 +372,7 @@ void sliceStructs(symtab_t* symtab, block* startblock)
                 assert(id);
                 sprintf(id, "__%s_%d", sold.Sident.ptr, SLICESIZE);
                 if (debugc) printf("creating slice symbol %s\n", id);
-                Symbol *snew = symbol_calloc(id, cast(uint)idlen);
+                Symbol *snew = symbol_calloc(id[0 .. idlen]);
                 free(id);
                 snew.Sclass = sold.Sclass;
                 snew.Sfl = sold.Sfl;

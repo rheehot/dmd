@@ -367,14 +367,20 @@ version (SCPP_HTOD)
 
 Symbol * symbol_calloc(const(char)* id)
 {
-    return symbol_calloc(id, cast(uint)strlen(id));
+    return symbol_calloc(id[0 .. strlen(id)]);
 }
 
-Symbol * symbol_calloc(const(char)* id, uint len)
-{   Symbol *s;
+extern(D) Symbol* symbol_calloc(string id)
+{
+    const(char)[] id_ = id;
+    return symbol_calloc(id_);
+}
 
+extern(D) Symbol* symbol_calloc(const(char)[] id)
+{
+    Symbol *s;
     //printf("sizeof(symbol)=%d, sizeof(s.Sident)=%d, len=%d\n",sizeof(symbol),sizeof(s.Sident),(int)len);
-    s = cast(Symbol *) mem_fmalloc(Symbol.sizeof - s.Sident.length + len + 1 + 5);
+    s = cast(Symbol*) mem_fmalloc(Symbol.sizeof - s.Sident.length + id.length + 1 + 5);
     memset(s,0,Symbol.sizeof - s.Sident.length);
 version (SCPP_HTOD)
 {
@@ -385,10 +391,11 @@ version (SCPP_HTOD)
 debug
 {
     if (debugy)
-        printf("symbol_calloc('%s') = %p\n",id,s);
+        printf("symbol_calloc('%.*s') = %p\n", cast(int) id.length, id.ptr, s);
     s.id = Symbol.IDsymbol;
 }
-    memcpy(s.Sident.ptr,id,len + 1);
+    memcpy(s.Sident.ptr, id.ptr, id.length);
+    s.Sident.ptr[id.length] = 0; // NUL-terminate the string
     s.Ssymnum = -1;
     return s;
 }
@@ -405,7 +412,7 @@ Symbol * symbol_name(const(char)* name,int sclass,type *t)
 Symbol * symbol_name(const(char)* name, uint len, int sclass, type *t)
 {
     type_debug(t);
-    Symbol *s = symbol_calloc(name, len);
+    Symbol *s = symbol_calloc(name[0 .. len]);
     s.Sclass = cast(char) sclass;
     s.Stype = t;
     s.Stype.Tcount++;

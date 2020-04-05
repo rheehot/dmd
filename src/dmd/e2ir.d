@@ -6068,7 +6068,7 @@ Symbol *toStringSymbol(const(char)* str, size_t len, size_t sz)
                 }
             }
 
-            si = symbol_calloc(buf.peekChars(), cast(uint)buf.length);
+            si = symbol_calloc(buf.peekChars()[0 .. buf.length]);
             si.Sclass = SCcomdat;
             si.Stype = type_static_array(cast(uint)(len * sz), tstypes[TYchar]);
             si.Stype.Tcount++;
