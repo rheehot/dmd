@@ -40,6 +40,7 @@ import dmd.backend.type;
 import dmd.backend.global;
 import dmd.backend.goh;
 import dmd.backend.code;
+import dmd.backend.symbol;
 import dmd.backend.ty;
 
 import dmd.backend.barray;

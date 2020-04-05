@@ -321,52 +321,6 @@ extern __gshared
     regm_t[24] pseudomask;
 }
 
-/* Symbol.c */
-extern (C) Symbol **symtab_realloc(Symbol **tab, size_t symmax);
-Symbol **symtab_malloc(size_t symmax);
-Symbol **symtab_calloc(size_t symmax);
-void symtab_free(Symbol **tab);
-//#if TERMCODE
-//void symbol_keep(Symbol *s);
-//#else
-//#define symbol_keep(s) (()(s))
-//#endif
-void symbol_keep(Symbol *s) { }
-void symbol_print(const Symbol* s);
-void symbol_term();
-const(char)* symbol_ident(const Symbol *s);
-Symbol *symbol_calloc(const(char)* id);
-Symbol *symbol_calloc(const(char)* id, uint len);
-Symbol *symbol_name(const(char)* name, int sclass, type *t);
-Symbol *symbol_name(const(char)* name, uint len, int sclass, type *t);
-Symbol *symbol_generate(int sclass, type *t);
-Symbol *symbol_genauto(type *t);
-Symbol *symbol_genauto(elem *e);
-Symbol *symbol_genauto(tym_t ty);
-void symbol_func(Symbol *);
-//void symbol_struct_addField(Symbol *s, const(char)* name, type *t, uint offset);
-Funcsym *symbol_funcalias(Funcsym *sf);
-Symbol *defsy(const(char)* p, Symbol **parent);
-void symbol_addtotree(Symbol **parent,Symbol *s);
-//Symbol *lookupsym(const(char)* p);
-Symbol *findsy(const(char)* p, Symbol *rover);
-void createglobalsymtab();
-void createlocalsymtab();
-void deletesymtab();
-void meminit_free(meminit_t *m);
-baseclass_t *baseclass_find(baseclass_t *bm,Classsym *sbase);
-baseclass_t *baseclass_find_nest(baseclass_t *bm,Classsym *sbase);
-int baseclass_nitems(baseclass_t *b);
-void symbol_free(Symbol *s);
-SYMIDX symbol_add(Symbol *s);
-SYMIDX symbol_add(symtab_t*, Symbol *s);
-SYMIDX symbol_insert(symtab_t*, Symbol *s, SYMIDX n);
-void freesymtab(Symbol **stab, SYMIDX n1, SYMIDX n2);
-Symbol *symbol_copy(Symbol *s);
-Symbol *symbol_searchlist(symlist_t sl, const(char)* vident);
-void symbol_reset(Symbol *s);
-tym_t symbol_pointerType(const Symbol* s);
-
 // cg87.c
 void cg87_reset();
 

@@ -20,6 +20,7 @@ import dmd.backend.cc;
 import dmd.backend.cdef;
 import dmd.backend.global;
 import dmd.backend.mem;
+import dmd.backend.symbol;
 import dmd.backend.ty;
 import dmd.backend.type;
 

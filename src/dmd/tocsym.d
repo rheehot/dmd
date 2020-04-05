@@ -53,6 +53,7 @@ import dmd.backend.type;
 import dmd.backend.global;
 import dmd.backend.oper;
 import dmd.backend.cgcv;
+import dmd.backend.symbol;
 import dmd.backend.ty;
 
 extern (C++):

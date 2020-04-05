@@ -63,6 +63,7 @@ version (SCPP_HTOD)
 extern (C++):
 
 nothrow:
+@nogc:
 
 alias MEM_PH_MALLOC = mem_malloc;
 alias MEM_PH_CALLOC = mem_calloc;
@@ -214,15 +215,15 @@ void symbol_term()
 
 static if (TERMCODE)
 {
-
-void symbol_keep(Symbol *s)
-{
-    symbol_debug(s);
-    s.Sr = keep;       // use Sr so symbol_free() doesn't nest
-    keep = s;
+    void symbol_keep(Symbol *s)
+    {
+        symbol_debug(s);
+        s.Sr = keep;       // use Sr so symbol_free() doesn't nest
+        keep = s;
+    }
 }
-
-}
+else
+    void symbol_keep(Symbol* s) {}
 
 /****************************************
  * Return alignment of symbol.

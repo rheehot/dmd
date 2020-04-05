@@ -19,6 +19,7 @@ import dmd.backend.code_x86;
 import dmd.backend.dlist;
 import dmd.backend.dt;
 import dmd.backend.el;
+import dmd.backend.symbol;
 import dmd.backend.type;
 
 extern (C++):
@@ -1250,6 +1251,7 @@ struct Symbol
 //#endif
 
     nothrow:
+    @nogc:
 
     Symbol* Sl, Sr;             // left, right child
     Symbol* Snext;              // next in threaded list
@@ -1456,11 +1458,6 @@ void symbol_debug(const Symbol* s)
 {
     debug assert(s.id == s.IDsymbol);
 }
-
-int Symbol_Salignsize(Symbol* s);
-bool Symbol_Sisdead(const Symbol* s, bool anyInlineAsm);
-int Symbol_needThis(const Symbol* s);
-bool Symbol_isAffected(const ref Symbol s);
 
 bool isclassmember(const Symbol* s) { return s.Sscope && s.Sscope.Sclass == SCstruct; }
 

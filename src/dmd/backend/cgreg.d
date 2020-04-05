@@ -31,6 +31,7 @@ import dmd.backend.code;
 import dmd.backend.code_x86;
 import dmd.backend.codebuilder;
 import dmd.backend.oper;
+import dmd.backend.symbol;
 import dmd.backend.ty;
 import dmd.backend.type;
 
