@@ -42,7 +42,7 @@ on:
       - master
       - stable
       # Use this branch name in your fork to test changes
-      - github-actions
+      - github-actions-2
 
 jobs:
   main:
@@ -97,33 +97,19 @@ jobs:
 
           # TODO: Implement support for clang and MSVC on Windows
           # Currently those are still being run by the auto-tester
-          - os: windows-2019
-
-        # This sets the configuration for each jobs
-        # There's a bit of duplication involved (e.g. breaking down g++-9.3 into 2 strings),
-        # but some items are unique (e.g. clang-9.0.0 and 4.0.1 have differences in their naming).
-        include:
-          # Clang boilerplate
-          - { target: clang-9.0.0, compiler: clang, cxx-version: 9.0.0 }
-          - { target: clang-8.0.0, compiler: clang, cxx-version: 8.0.0 }
-          - { target: clang-7.0.0, compiler: clang, cxx-version: 7.0.0 }
-          - { target: clang-6.0.0, compiler: clang, cxx-version: 6.0.0 }
-          - { target: clang-5.0.2, compiler: clang, cxx-version: 5.0.2 }
-          # Note: 4.0.1 has no 16.04 package and the OSX archive extracts
-          #  to a different arch, so we don't use it
-          - { target: clang-4.0.0, compiler: clang, cxx-version: 4.0.0 }
-          - { target: clang-3.9.0, compiler: clang, cxx-version: 3.9.0 }
-          # g++ boilerplace
-          - { target: g++-9, compiler: g++, cxx-version: 9.3.0 }
-          - { target: g++-8, compiler: g++, cxx-version: 8.4.0 }
-          - { target: g++-7, compiler: g++, cxx-version: 7.5.0 }
-          - { target: g++-6, compiler: g++, cxx-version: 6.5.0 }
-          - { target: g++-5, compiler: g++, cxx-version: 5.5.0 }
-          # Platform boilerplate
-          - { os: ubuntu-16.04, arch: x86_64-linux-gnu-ubuntu-16.04 }
-          - { os: macOS-10.15,  arch: x86_64-apple-darwin }
-          # Clang 9.0.0 have a different arch for OSX
-          - { os: macOS-10.15, target: clang-9.0.0, arch: x86_64-darwin-apple }
+          - { os: windows-2019, target: msvc-2017 }
+          - { os: windows-2019, target: msvc-2015 }
+          - { os: windows-2019, target: msvc-2013 }
+          - { os: windows-2019, target: clang-9.0.0 }
+          - { os: windows-2019, target: clang-8.0.0 }
+          - { os: windows-2019, target: clang-7.0.0 }
+          - { os: windows-2019, target: clang-6.0.0 }
+          - { os: windows-2019, target: clang-5.0.2 }
+          - { os: windows-2019, target: clang-4.0.0 }
+          - { os: windows-2019, target: clang-3.9.0 }
+          # Testing
+          - { os: ubuntu-16.04 }
+          - { os: macOS-10.15 }
 
     # We're using the latest available images at the time of this commit.
     # Using a specific version for reproductibility.
@@ -263,6 +249,7 @@ jobs:
     - name: '[Posix] Build compiler & standard library'
       # By default, VMs have 2 processors available, hence the `-j2`:
       # https://help.github.com/en/actions/reference/virtual-environments-for-github-hosted-runners#supported-runners-and-hardware-resources
+      if: runner.os != 'Windows'
       run: |
         # All hosts are 64 bits but let's be explicit
         ./dmd/src/build.d -j2 MODEL=64
@@ -276,13 +263,43 @@ jobs:
           make -C phobos   -f posix.mak -j2 MODEL=32
         fi
 
+    - name: '[Windows] Build compiler & standard library'
+      if: runner.os == 'Windows'
+      shell: cmd
+      env:
+        HOST_DC: ${{ env.DC }}
+      run: |
+        call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+        dmd -run ./dmd/src/build.d -j2 MODEL=64
+        dmd -run ./dmd/src/build.d -j2 MODEL=32
+        cd dmd
+        make -f win64.mak
+        make -f win32.mak
+        cd ..\druntime
+        make -f win64.mak
+        make -f win32.mak
+        cd ..\phobos\
+        make -f win64.mak
+        make -f win32.mak
+        cd ..\
+
     ########################################
     #        Running the test suite        #
     ########################################
-    - name: Run C++ test suite
+    - name: '[Posix] Run C++ test suite'
+      if: runner.os != 'Windows'
       run: |
         ./dmd/test/run.d --environment runnable_cxx MODEL=64
         if [ ${{ matrix.compiler }} == "g++" ]; then
           ./dmd/test/run.d clean
           ./dmd/test/run.d runnable_cxx MODEL=32
         fi
+
+    - name: '[Windows] Run C++ test suite'
+      if: runner.os == 'Windows'
+      shell: cmd
+      run: |
+        call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+        dmd -run ./dmd/test/run.d --environment runnable_cxx MODEL=64
+        dmd -run ./dmd/test/run.d clean
+        dmd -run ./dmd/test/run.d runnable_cxx MODEL=32
