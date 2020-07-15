@@ -1259,64 +1259,57 @@ private extern (C++) final class StatementSemanticVisitor : Visitor
                     }
                 }
 
-                foreach (i; 0 .. dim)
+                // Declare the key
+                if (dim == 2)
                 {
-                    // Declare parameters
-                    Parameter p = (*fs.parameters)[i];
-                    VarDeclaration var;
+                    Parameter p = (*fs.parameters)[0];
+                    auto var = new VarDeclaration(loc, p.type.mutableOf(), Identifier.generateId("__key"), null);
+                    var.storage_class |= STC.temp | STC.foreach_;
 
-                    if (dim == 2 && i == 0)
+                    fs.key = var;
+                    if (p.storageClass & STC.ref_)
                     {
-                        var = new VarDeclaration(loc, p.type.mutableOf(), Identifier.generateId("__key"), null);
-                        var.storage_class |= STC.temp | STC.foreach_;
-
-                        fs.key = var;
-                        if (p.storageClass & STC.ref_)
+                        if (var.type.constConv(p.type) <= MATCH.nomatch)
                         {
-                            if (var.type.constConv(p.type) <= MATCH.nomatch)
-                            {
-                                fs.error("key type mismatch, `%s` to `ref %s`",
-                                    var.type.toChars(), p.type.toChars());
-                                goto case Terror;
-                            }
-                        }
-                        if (tab.ty == Tsarray)
-                        {
-                            TypeSArray ta = cast(TypeSArray)tab;
-                            IntRange dimrange = getIntRange(ta.dim);
-                            // https://issues.dlang.org/show_bug.cgi?id=12504
-                            dimrange.imax = SignExtendedNumber(dimrange.imax.value-1);
-                            if (!IntRange.fromType(var.type).contains(dimrange))
-                            {
-                                fs.error("index type `%s` cannot cover index range 0..%llu",
-                                    p.type.toChars(), ta.dim.toInteger());
-                                goto case Terror;
-                            }
-                            fs.key.range = new IntRange(SignExtendedNumber(0), dimrange.imax);
+                            fs.error("key type mismatch, `%s` to `ref %s`",
+                                     var.type.toChars(), p.type.toChars());
+                            goto case Terror;
                         }
                     }
-                    else
+                    if (tab.ty == Tsarray)
                     {
-                        var = new VarDeclaration(loc, p.type, p.ident, null);
-                        var.storage_class |= STC.foreach_;
-                        var.storage_class |= p.storageClass & (STC.IOR | STC.TYPECTOR);
-                        if (var.storage_class & (STC.ref_ | STC.out_))
-                            var.storage_class |= STC.nodtor;
-
-                        fs.value = var;
-                        if (var.storage_class & STC.ref_)
+                        TypeSArray ta = cast(TypeSArray)tab;
+                        IntRange dimrange = getIntRange(ta.dim);
+                        // https://issues.dlang.org/show_bug.cgi?id=12504
+                        dimrange.imax = SignExtendedNumber(dimrange.imax.value-1);
+                        if (!IntRange.fromType(var.type).contains(dimrange))
                         {
-                            if (fs.aggr.checkModifiable(sc2, 1) == Modifiable.initialization)
-                                var.storage_class |= STC.ctorinit;
-
-                            Type t = tab.nextOf();
-                            if (t.constConv(p.type) <= MATCH.nomatch)
-                            {
-                                fs.error("argument type mismatch, `%s` to `ref %s`",
-                                    t.toChars(), p.type.toChars());
-                                goto case Terror;
-                            }
+                            fs.error("index type `%s` cannot cover index range 0..%llu",
+                                     p.type.toChars(), ta.dim.toInteger());
+                            goto case Terror;
                         }
+                        fs.key.range = new IntRange(SignExtendedNumber(0), dimrange.imax);
+                    }
+                }
+                // Now declare the value
+                auto var = new VarDeclaration(loc, p.type, p.ident, null);
+                var.storage_class |= STC.foreach_;
+                var.storage_class |= p.storageClass & (STC.IOR | STC.TYPECTOR);
+                if (var.storage_class & (STC.ref_ | STC.out_))
+                    var.storage_class |= STC.nodtor;
+
+                fs.value = var;
+                if (var.storage_class & STC.ref_)
+                {
+                    if (fs.aggr.checkModifiable(sc2, 1) == Modifiable.initialization)
+                        var.storage_class |= STC.ctorinit;
+
+                    Type t = tab.nextOf();
+                    if (t.constConv(p.type) <= MATCH.nomatch)
+                    {
+                        fs.error("argument type mismatch, `%s` to `ref %s`",
+                                 t.toChars(), p.type.toChars());
+                        goto case Terror;
                     }
                 }
 
