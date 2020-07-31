@@ -1943,7 +1943,7 @@ else
      *  Function literal created, as an expression
      *  null if error.
      */
-    static FuncExp foreachBodyToFunction(Scope* sc, ForeachStatement fs, TypeFunction tfld)
+    private static FuncExp foreachBodyToFunction(Scope* sc, ForeachStatement fs, TypeFunction tfld)
     {
         auto params = new Parameters();
         foreach (i; 0 .. fs.parameters.dim)
