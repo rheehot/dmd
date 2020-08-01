@@ -1287,8 +1287,8 @@ extern(C++) Type typeSemantic(Type t, const ref Loc loc, Scope* sc)
                     .error(loc, "cannot have parameter of function type `%s`", fparam.type.toChars());
                     errors = true;
                 }
-                else if (!fparam.isReference() &&
-                         (t.ty == Tstruct || t.ty == Tsarray || t.ty == Tenum))
+                else if ((t.ty == Tstruct || t.ty == Tsarray || t.ty == Tenum) &&
+                         !fparam.isReference())
                 {
                     Type tb2 = t.baseElemOf();
                     if (tb2.ty == Tstruct && !(cast(TypeStruct)tb2).sym.members ||
@@ -1310,7 +1310,7 @@ extern(C++) Type typeSemantic(Type t, const ref Loc loc, Scope* sc)
                     fparam.storageClass |= STC.return_;
                 }
 
-                if (fparam.storageClass & STC.return_)
+                if (fparam.storageClass & STC.return_ && fparam.type.ty != Ttuple)
                 {
                     if (fparam.isReference())
                     {
@@ -1397,7 +1397,8 @@ extern(C++) Type typeSemantic(Type t, const ref Loc loc, Scope* sc)
                     e = e.implicitCastTo(argsc, fparam.type);
 
                     // default arg must be an lvalue
-                    if (isRefOrOut && !isAuto)
+                    if (isRefOrOut &&
+                        !(isAuto || (fparam.storageClass & STC.in_ && global.params.previewIn)))
                         e = e.toLvalue(argsc, e);
 
                     fparam.defaultArg = e;

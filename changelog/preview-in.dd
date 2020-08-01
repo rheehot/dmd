@@ -1,0 +1,14 @@
+Changed `-preview=in` to mean `ref` when possible and accept rvalues
+
+DMD v2.092.0 added `-preview=in` to mean `const scope`,
+as it was originally intended, instead of `const` without the switch.
+
+This release extends the previous approach by making `in` means `ref const scope`
+when the type it is applied is either bigger than the machine's word size
+(meaning it has to be passed on the stack instead of the heap),
+or the type is not trivially copy-able, for example for types that
+have a postblit or copy constructor defined or disabled.
+
+In addition, using `in` now allows parameters to be passed by rvalue.
+This comes as a replacement for the `-preview=rvaluerefparams` switch
+which is now deprecated.

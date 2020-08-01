@@ -1410,6 +1410,10 @@ extern (C++) class VarDeclaration : Declaration
             return null;
         }
 
+        // It's a parameter that is `in`
+        if (storage_class & STC.in_ && Parameter.isRefIn(this.type))
+            return null;
+
         if (iscatchvar)
             return null;    // destructor is built by `void semantic(Catch c, Scope* sc)`, not here
 

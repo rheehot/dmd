@@ -4770,6 +4770,10 @@ extern (C++) final class TypeFunction : TypeNext
                         // for partial ordering, value is an irrelevant mockup, just look at the type
                         m = targ.implicitConvTo(tprm);
                     }
+                    // If our argument is `STC.in_` and the preview switch is enabled,
+                    // we will never call the copy constructor
+                    else if (p.storageClass & STC.in_ && Parameter.isRefIn(targ))
+                        m = arg.implicitConvTo(tprm);
                     else
                     {
                         const isRef = p.isReference();
@@ -4855,6 +4859,19 @@ extern (C++) final class TypeFunction : TypeNext
                                 dinteger_t dim = (cast(TypeSArray)tp).dim.toUInteger();
                                 ta = tn.sarrayOf(dim);
                             }
+                        }
+                        else if (p.storageClass & STC.in_)
+                        {
+                            // Allow converting a literal to an `in` which is `ref`
+                            if (arg.op == TOK.arrayLiteral && tp.ty == Tsarray)
+                            {
+                                Type tn = tp.nextOf();
+                                dinteger_t dim = (cast(TypeSArray)tp).dim.toUInteger();
+                                ta = tn.sarrayOf(dim);
+                            }
+
+                            // Need to make this a rvalue through a temporary
+                            m = MATCH.convert;
                         }
                         else if (!global.params.rvalueRefParam ||
                                  p.storageClass & STC.out_ ||
@@ -6689,6 +6706,45 @@ extern (C++) final class Parameter : ASTNode
         return new Parameter(storageClass, type ? type.syntaxCopy() : null, ident, defaultArg ? defaultArg.syntaxCopy() : null, userAttribDecl ? cast(UserAttributeDeclaration) userAttribDecl.syntaxCopy(null) : null);
     }
 
+    /**
+     * Given a type, returns whether this type should be passed by `ref`
+     *
+     * When using `-preview=in`, this returns whether it is more efficient
+     * to pass a type by value, or by reference.
+     * When `-preview=in` is not used, this always returns `false`.
+     *
+     * Params:
+     *   paramt = The type of the parameter that has `STC.in_`
+     */
+    static bool isRefIn (Type type)
+    {
+        if (!global.params.previewIn)
+            return false;
+
+        // If it has a copy constructor / destructor / postblit,
+        // it is always by ref
+        if (type.needsDestruction() || type.needsCopyOrPostblit())
+            return true;
+        // If the type can't be copied, always by `ref`
+        if (!type.isCopyable())
+            return true;
+
+        // If it's a dynamic array, use the value type as it
+        // allows covariance between `in char[]` and `scope const(char)[]`
+        // The same reasoning applies to pointers and classes,
+        // but that is handled by the `(sz > 8)` below.
+        if (type.ty == Tarray)
+            return false;
+        // Pass delegates by value to allow covariance
+        // Function pointers are a single pointers and handled below.
+        if (type.ty == Tdelegate)
+            return false;
+
+        // Otherwise, only if it is efficient to do so
+        const sz = type.size();
+        return global.params.is64bit ? (sz > 8) : (sz > 4);
+    }
+
     /****************************************************
      * Determine if parameter is a lazy array of delegates.
      * If so, return the return type of those delegates.
@@ -6717,9 +6773,10 @@ extern (C++) final class Parameter : ASTNode
     }
 
     /// Returns: Whether the function parameter is a reference (out / ref)
-    bool isReference() const @safe pure nothrow @nogc
+    bool isReference()
     {
-        return (this.storageClass & (STC.ref_ | STC.out_)) != 0;
+        return (this.storageClass & (STC.ref_ | STC.out_)) != 0
+            || (this.storageClass & STC.in_ && Parameter.isRefIn(this.type));
     }
 
     // kludge for template.isType()
@@ -6844,17 +6901,23 @@ extern (C++) final class Parameter : ASTNode
      *  true = `this` can be used in place of `p`
      *  false = nope
      */
-    bool isCovariant(bool returnByRef, const Parameter p, bool previewIn = global.params.previewIn)
-        const pure nothrow @nogc @safe
+    bool isCovariant(bool returnByRef, Parameter p)
     {
         ulong thisSTC = this.storageClass;
         ulong otherSTC = p.storageClass;
 
-        if (previewIn)
+        // TODO: We might be able to assume that the types are the same,
+        // hence need to call `isRefIn` once.
+        if (global.params.previewIn)
         {
-            if (thisSTC & STC.in_)
+            if (thisSTC & STC.in_ && Parameter.isRefIn(this.type))
+                thisSTC |= (STC.scope_ | STC.ref_);
+            else if (thisSTC & STC.in_ && (this.type.hasPointers() || this.type.ty == Ttuple))
                 thisSTC |= STC.scope_;
-            if (otherSTC & STC.in_)
+
+            if (otherSTC & STC.in_ && Parameter.isRefIn(p.type))
+                otherSTC |= (STC.scope_ | STC.ref_);
+            else if (otherSTC & STC.in_ && (p.type.hasPointers() || p.type.ty == Ttuple))
                 otherSTC |= STC.scope_;
         }
 

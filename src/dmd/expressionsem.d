@@ -1974,7 +1974,23 @@ private bool functionParameters(const ref Loc loc, Scope* sc,
                     arg = arg.optimize(WANTvalue, p.isReference());
                 }
             }
-            if (p.storageClass & STC.ref_)
+
+            // Support passing rvalue to `in` parameters
+            if (p.storageClass & STC.in_ && Parameter.isRefIn(arg.type))
+            {
+                if (!arg.isLvalue())
+                {
+                    auto v = copyToTemp(0, "__rvalue", arg);
+                    Expression ev = new DeclarationExp(arg.loc, v);
+                    ev = new CommaExp(arg.loc, ev, new VarExp(arg.loc, v));
+                    arg = ev.expressionSemantic(sc);
+                }
+                arg = arg.toLvalue(sc, arg);
+
+                // Look for mutable misaligned pointer, etc., in @safe mode
+                err |= checkUnsafeAccess(sc, arg, false, true);
+            }
+            else if (p.storageClass & STC.ref_)
             {
                 if (global.params.rvalueRefParam &&
                     !arg.isLvalue() &&
@@ -2240,7 +2256,7 @@ private bool functionParameters(const ref Loc loc, Scope* sc,
             if (firstdtor == -1 && arg.type.needsDestruction())
             {
                 Parameter p = (i >= nparams ? null : tf.parameterList[i]);
-                if (!(p && (p.storageClass & (STC.lazy_ | STC.ref_ | STC.out_))))
+                if (!(p && (p.storageClass & STC.lazy_ || p.isReference())))
                     firstdtor = i;
             }
         }

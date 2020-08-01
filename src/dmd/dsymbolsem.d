@@ -1105,7 +1105,11 @@ private extern(C++) final class DsymbolSemanticVisitor : Visitor
         // At this point we can add `scope` to the STC instead of `in`,
         // because we are never going to use this variable's STC for user messages
         if (dsym.storage_class & STC.in_ && global.params.previewIn)
+        {
             dsym.storage_class |= STC.scope_;
+            if (Parameter.isRefIn(dsym.type))
+                dsym.storage_class |= STC.ref_;
+        }
 
         if (dsym.storage_class & STC.scope_)
         {
